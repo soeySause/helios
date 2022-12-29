@@ -6,7 +6,6 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio/strand.hpp>
-#include <nlohmann/json.hpp>
 
 #include <future>
 #include <iostream>
@@ -22,7 +21,6 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-using json = nlohmann::json;
 
 // Report a failure
 void fail(beast::error_code ec, char const* what);
@@ -37,7 +35,6 @@ class session : public std::enable_shared_from_this<session>
     std::string host_;
     std::string text_;
     net::steady_timer timer_;
-    std::shared_ptr<cache> cache_;
     std::vector <std::string> queue_;
     std::vector <bool> readingQueue_;
     std::string responseString;
@@ -49,7 +46,7 @@ class session : public std::enable_shared_from_this<session>
 public:
     explicit session(net::io_context& ioc, ssl::context& ctx, const std::shared_ptr<cache>& cache);
 
-    void run(const std::basic_string<char, std::char_traits<char>, std::allocator<char>>& host, char const* port, char const* text);
+    void run(const std::basic_string<char, std::char_traits<char>, std::allocator<char>>& host, char const* port);
     void on_resolve(beast::error_code ec, const tcp::resolver::results_type& results);
     void on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type& ep);
     void on_ssl_handshake(beast::error_code ec);
@@ -62,7 +59,7 @@ public:
     std::string getResponse();
     void closeSession();
 
-    void asyncQueue(const std::string& payload = "", bool synchronous = false);
+    void asyncQueue(const std::string& payload = "");
 };
 
 

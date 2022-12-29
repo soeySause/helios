@@ -42,7 +42,6 @@ int request::getRequest(const std::string& host, const std::string& target, cons
 
     if(!authorization.empty()) req.set(http::field::authorization, "Bot " + authorization);
 
-
     try {
 
         // Send the HTTP request to the remote host

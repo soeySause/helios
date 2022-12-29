@@ -10,15 +10,12 @@ void fail(beast::error_code ec, char const* what)
 session::session(net::io_context& ioc, ssl::context& ctx, const std::shared_ptr<cache>& cache)
         : resolver_(net::make_strand(ioc))
         , timer_(ioc)
-        , ws_(net::make_strand(ioc), ctx) {
-    this->cache_ = cache;
-}
+        , ws_(net::make_strand(ioc), ctx){};
 
 // Start the asynchronous operation
 void session::run(
         const std::basic_string<char, std::char_traits<char>, std::allocator<char>>& host,
-        char const* port,
-        char const* text)
+        char const* port)
 {
     // Save these for later
     host_ = host;
@@ -177,7 +174,7 @@ void session::enable_async_read() {
                     shared_from_this()));
 }
 
-void session::asyncQueue(const std::string& payload, bool synchronous)
+void session::asyncQueue(const std::string& payload)
 {
     //If something to write, add to back of queue
     if(!payload.empty())
