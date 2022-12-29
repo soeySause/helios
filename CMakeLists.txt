@@ -1,45 +1,48 @@
 cmake_minimum_required(VERSION 3.23)
 project(helios)
+include(FetchContent)
 
-set(PROJECT_NAME helios)
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(helios SHARED include/events.h)
+find_package(OpenSSL REQUIRED)
+find_package(Boost REQUIRED)
 
-target_sources(${PROJECT_NAME} PRIVATE src/client.cpp)
+FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json
+        UPDATE_DISCONNECTED 1
+)
 
+FetchContent_Populate(json)
+include_directories(${json_SOURCE_DIR}/include/)
+include_directories(${MYSQL_CONNECTOR_CPP_ROOT_DIR}/include/jdbc/)
+
+add_library(${PROJECT_NAME} STATIC)
+
+target_sources(${PROJECT_NAME}
+        PRIVATE
+        src/client.cpp
+        src/session.cpp
+        include/session.hpp
+        src/cache.cpp
+        include/cache.hpp
+        src/request.cpp
+        include/request.hpp
+        src/discordApiRequest.cpp
+        include/discordApiRequest.hpp
+        )
+
+target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
 target_include_directories(${PROJECT_NAME}
         PRIVATE
-            # where the library itself will look for its internal headers
             ${CMAKE_CURRENT_SOURCE_DIR}/src
         PUBLIC
-            # where top-level project will look for the library's public headers
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-            # where external projects will look for the library's public headers
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        )
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-if(DEFINED CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    message(
-            STATUS
-            "CMAKE_INSTALL_PREFIX is not set\n"
-            "Default value: ${CMAKE_INSTALL_PREFIX}\n"
-            "Will set it to ${CMAKE_SOURCE_DIR}/bin"
-    )
-    set(CMAKE_INSTALL_PREFIX
-            "${CMAKE_SOURCE_DIR}/bin"
-            CACHE PATH "Where the library will be installed to" FORCE
-            )
-else()
-    message(
-            STATUS
-            "CMAKE_INSTALL_PREFIX was already set\n"
-            "Current value: ${CMAKE_INSTALL_PREFIX}"
-    )
-endif()
-
+# without it public headers won't get installed
 set(public_headers
-        include/client.h
+        include/client.hpp
+        include/event.hpp
         )
-# note that ${public_headers} has to be in quotes
-set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${public_headers}")
+

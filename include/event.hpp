@@ -1,7 +1,9 @@
-#ifndef HELIOS_EVENTS_H
-#define HELIOS_EVENTS_H
+#ifndef HELIOS_EVENT_HPP
+#define HELIOS_EVENT_HPP
 
-namespace helios::event
+#include <functional>
+
+namespace helios
 {
     class eventData{
 
@@ -82,9 +84,7 @@ namespace helios::event
     static void voiceServerUpdate(eventData e);
 
     static void webhooksUpdate(eventData e);
-
-
 }
 
 
-#endif //HELIOS_EVENTS_H
+#endif //HELIOS_EVENT_HPP
