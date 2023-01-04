@@ -28,7 +28,6 @@ void fail(beast::error_code ec, char const* what);
 // Sends a WebSocket message and prints the response
 class session : public std::enable_shared_from_this<session>
 {
-
     tcp::resolver resolver_;
     websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
     beast::flat_buffer buffer_;
@@ -41,7 +40,6 @@ class session : public std::enable_shared_from_this<session>
 
     //Initialized as true to ensure no messages are sent until connection is established
     bool currentlyQueued_ = true;
-
 
 public:
     explicit session(net::io_context& ioc, ssl::context& ctx, const std::shared_ptr<cache>& cache);

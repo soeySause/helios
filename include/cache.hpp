@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <cassert>
 #include <string>
+#include <system_error>
+#include <iostream>
 
 class cache {
 private:

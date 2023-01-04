@@ -174,19 +174,16 @@ void session::enable_async_read() {
                     shared_from_this()));
 }
 
-void session::asyncQueue(const std::string& payload)
-{
+void session::asyncQueue(const std::string& payload) {
     //If something to write, add to back of queue
-    if(!payload.empty())
-    {
+    if(!payload.empty()) {
         queue_.emplace_back(payload);
     }
 
     if(queue_.empty()) return;
 
     // If there is something to write, write it.
-    if(!currentlyQueued_ && !queue_.empty())
-    {
+    if(!currentlyQueued_) {
         currentlyQueued_ = true;
 
         ws_.async_write(

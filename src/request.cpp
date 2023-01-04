@@ -51,6 +51,7 @@ int request::getRequest(const std::string& host, const std::string& target, cons
         http::read(sock, buffer, res);
 
         const json jsonResponse = json::parse(res.body());
+        std::cout << res.body() << std::endl;
 
         // For if you need to cache a non json message
         if(whatToCache[0] == "*") cache_->put(whatToCache[1], jsonResponse.dump());

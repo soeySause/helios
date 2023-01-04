@@ -6,11 +6,11 @@ namespace helios {
         this->cache_ = std::make_shared<cache>();
     }
 
-    void client::run(const std::string& token)
+    [[noreturn]] void client::run(const std::string& token)
     {
         if(!cache_->exist("token")){
             if(token.empty()) {
-                std::cerr << "No token proviced" << std::endl;
+                std::cerr << "No token provided" << std::endl;
                 exit(EXIT_FAILURE);
             } else {
                 cache_->put("token", token);
@@ -24,177 +24,269 @@ namespace helios {
             exit(EXIT_FAILURE);
         }
 
-
-        std::cout << "Attempting to connect to websocket" << std::endl;
-
-        load_root_certificates(this->sslContext);
-        this->p = std::make_shared<session>(this->ioContext, this->sslContext, cache_);
-        if(!cache_->exist("url"))
-        {
+        if(!cache_->exist("url")) {
             std::cerr << "Could not find a url in cache to connect to!" << std::endl;
             exit(EXIT_FAILURE);
-
         }
-            // Splice url to make usable
-            std::string url = cache_->get("url");
-            std::string host = url.substr(6, url.length() - 6);
 
-            //if(connectionType == "resume_gateway_url")
-            //{
-            //    this->ioContext.reset();
-            //    this->p->asyncQueue(bot::websocket::sendEvents::resumeSessionPayload(this->cache_));
-            //}
+        std::cout << "Attempting to start bot" << std::endl;
+        std::cout << "Creating " << this->cache_->get("shards") << " shards" << std::endl;
+        load_root_certificates(this->sslContext);
 
-            p->run(host, "443");
-            //thread heartbeatThread(&client::heartbeatCycle, this);
+        // Splice url to make usable
+        std::string host = cache_->get("url").substr(6, cache_->get("url").length() - 6);
 
-            this->ioContext.run();
-
-
-            while (this->p->is_socket_open()) {
-                this->ioContext.restart();
-                this->p->enable_async_read();
-
-                const std::string wsResponse = this->p->getResponse();
-                std::cout << wsResponse << std::endl;
-
-                const json wsResponseJson = json::parse(wsResponse);
-                const int opCode = wsResponseJson["op"];
-                std::string event;
-
-                switch(opCode) {
-                    case 0: {
-                        // Case 0 is for sending and receiving events
-                        event = wsResponseJson["t"];
-                        cache_->put("s", wsResponseJson["s"].dump());
-                        break;
-                    }
-                    case 1: {
-                        break;
-                    }
-                    case 7: {
-                        // Case 7 is sent when discord wants you to reconnect
-                        event = "RECONNECT";
-                        break;
-                    }
-                    case 9: {
-                        // Case 9 is sent when ws session is invalid
-                        if(wsResponseJson["d"] == "true")
-                            event = "RECONNECT";
-                        else
-                            event = "DISCONNECT";
-                        break;
-                    }
-                    case 10: {
-                        // Case 0 is sent on initial connection with discord
-                        cache_->put("heartbeat_interval", wsResponseJson["d"]["heartbeat_interval"].dump());
-                        event = "ON_ENABLE";
-                        break;
-                    }
-                    case 11: {
-                        // Case 11 is sent on heartbeats
-                        if(cache_->exist("receivedHeartbeat")) {
-                            cache_->put("receivedHeartbeat", "true");
-                        }
-                        break;
-                    }
-                    default: {
-                        std::cerr << "Unknown op code " << std::to_string(opCode) << std::endl;
-                        break;
-                    }
-                }
-
-                if(!event.empty()) {
-                    if(event == "ON_ENABLE"){
-                        std::cout << "Attempting to start bot" << std::endl;
-
-                        json identifyPayload;
-                        identifyPayload["op"] = 2;
-                        identifyPayload["d"]["token"] = token;
-
-                        identifyPayload["d"]["properties"]["os"] = this->properties.getOs();
-                        identifyPayload["d"]["properties"]["browser"] = this->properties.getBrowser();
-                        identifyPayload["d"]["properties"]["device"] = this->properties.getDevice();
-
-                        identifyPayload["d"]["compress"] = this->compress;
-                        identifyPayload["d"]["large_threshold"] = this->getLargeThreshold();
-
-                        json jsonShards = json::array();
-                        jsonShards = {0, std::stoi(this->cache_->get("shards"))};
-                        identifyPayload["d"]["shard"] = jsonShards;
-
-                        json jsonActivitiesArray = json::array();
-                        json jsonActivitiesObject;
-                        jsonActivitiesObject["name"] = this->presence.activities.getName();
-                        jsonActivitiesObject["type"] = this->presence.activities.getType();
-                        jsonActivitiesObject["url"] = this->presence.activities.getUrl();
-                        jsonActivitiesArray = jsonActivitiesObject;
-                        identifyPayload["d"]["presence"]["activities"] = jsonActivitiesArray;
-
-                        identifyPayload["d"]["presence"]["status"] = this->presence.getStatus();
-                        identifyPayload["d"]["presence"]["since"] = this->presence.getSince();
-                        identifyPayload["d"]["presence"]["afk"] = this->presence.getAfk();
-
-                        identifyPayload["d"]["intents"] = this->getIntents();
-
-                        std::cout << identifyPayload.dump() << std::endl;
-
-                        this->p->asyncQueue(identifyPayload.dump());
-                    }
-                }
-
-
-                this->ioContext.run();
+        while(true) {
+            if(reconnecting) {
+                reconnecting = false;
+                std::string host = cache_->get("url").substr(6, cache_->get("url").length() - 6);
+            }
+            for(int shard = 0; shard < std::stoi(this->cache_->get("shards")); shard++) {
+                this->shardedConnections.emplace_back(&client::createWsShard, this, shard, host);
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
 
-            //heartbeatThread.join();
-            //this->event_->reconnect();
+            for(auto& thread : this->shardedConnections) {
+                if(thread.joinable()) {
+                    thread.join();
+                }
+            }
+        }
     }
 
-    /*
-    void client::sendHeartbeat()
+    void client::createWsShard(const int& shard, const std::string& host) {
+        net::io_context ioContext;
+        std::shared_ptr<session> shardSession;
+
+        shardedSessions.emplace_back(shardSession);
+        shardSession = std::make_shared<session>(ioContext, this->sslContext, cache_);
+        shardSession->run(host, "443");
+
+        ioContext.run();
+        startHeartbeatCycle(shardSession);
+
+        //if(this->reconnecting) {
+        //    this->p->asyncQueue(/*resume session payload*/" ");
+        //}
+
+        while (shardSession->is_socket_open()) {
+            ioContext.restart();
+            shardSession->enable_async_read();
+
+            const std::string wsResponse = shardSession->getResponse();
+            std::cout << wsResponse << std::endl;
+            this->parseResponse(shardSession, wsResponse, shard);
+
+            ioContext.run();
+        }
+        ioContext.stop();
+    }
+
+    void client::parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response, const int& shard)
+    {
+        const json wsResponseJson = json::parse(response);
+        const int opCode = wsResponseJson["op"];
+        std::string event;
+
+        switch(opCode) {
+            case 0: {
+                // Case 0 is for sending and receiving events
+                event = wsResponseJson["t"];
+                cache_->put("s", wsResponseJson["s"].dump());
+                break;
+            }
+            case 1: {
+                break;
+            }
+            case 7: {
+                // Case 7 is sent when discord wants you to reconnect
+                event = "RECONNECT";
+                break;
+            }
+            case 9: {
+                // Case 9 is sent when ws session is invalid
+                if(wsResponseJson["d"] == "true")
+                    event = "RECONNECT";
+                else
+                    event = "DISCONNECT";
+                break;
+            }
+            case 10: {
+                // Case 0 is sent on initial connection with discord
+                cache_->put("heartbeat_interval", wsResponseJson["d"]["heartbeat_interval"].dump());
+                if(wsResponseJson["s"].is_null()) {
+                    cache_->put("s", "0");
+                } else {
+                    cache_->put("s", wsResponseJson["s"].dump());
+                }
+                event = "ON_ENABLE";
+                break;
+            }
+            case 11: {
+                // Case 11 is sent on heartbeats
+                if(cache_->exist("receivedHeartbeat")) {
+                    cache_->put("receivedHeartbeat", "true");
+                }
+                break;
+            }
+            default: {
+                std::cerr << "Unknown op code " << std::to_string(opCode) << std::endl;
+                break;
+            }
+        }
+
+        if(!event.empty()) {
+            const std::string& executeEvent = event;
+            if(executeEvent == "ON_ENABLE"){
+                json identifyPayload = getIdentifyPayload(shard);
+                sessionShard->asyncQueue(identifyPayload.dump());
+                return;
+            }
+
+            if(executeEvent == "READY") {
+                if(shard > stoi(this->cache_->get("shards")) - 1) {
+                    std::cerr << "Created shard " << std::to_string(shard) << " but only " << std::to_string(stoi(this->cache_->get("shards")) - 1) << " should exist" << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+
+                //this->cache_->put("[" + std::to_string(shard) + ", " + this->cache_->get("shards") + "]|");
+
+                if(stoi(this->cache_->get("shards")) > 1) {
+                    std::cout << "Shard " << shard << " is online" << std::endl;
+                } else {
+                    std::cout << "Bot is online" << std::endl;
+                }
+
+
+                bool hasGuildMemberIntents = false;
+                std::string binaryIntents;
+                int intentsInt = 14;
+
+                while(intentsInt != 0) {
+                    if (intentsInt % 2 == 0) {
+                        binaryIntents += "0";
+                    } else {
+                        binaryIntents += "1";
+                    }
+                    intentsInt /= 2;
+                }
+                return;
+            }
+            if(executeEvent == "RECONNECT") {
+                reconnecting = true;
+                return;
+            }
+
+            if(executeEvent == "DISCONNECT") {
+                return;
+            }
+        }
+    }
+
+    void client::startHeartbeatCycle(const std::shared_ptr<session>& sessionShard) {
+        this->heartbeatThread.emplace_back(&client::heartbeatCycle, this, sessionShard);
+    }
+
+    void client::stopHeartbeatCycle() {
+        for(auto& thread : this->shardedConnections) {
+            if(thread.joinable()) {
+                thread.join();
+            }
+        }
+    }
+
+    void client::sendHeartbeat(const std::shared_ptr<session>& sessionShard)
     {
         if(cache_->exist("heartbeat_interval"))
         {
-            this->p->asyncQueue(bot::websocket::sendEvents::getHeartbeatEvent(cache_));
+            json heartbeatPayload;
+            heartbeatPayload["op"] = 1;
+            heartbeatPayload["d"] = this->cache_->get("s");
+
+            sessionShard->asyncQueue(heartbeatPayload.dump());
         }
     }
 
-    void client::heartbeatCycle()
+    void client::heartbeatCycle(const std::shared_ptr<session>& sessionShard)
     {
         cache_->put("receivedHeartbeat", "false");
-        if(cache_->exist("heartbeat_interval"))
-        {
-            const int waitForMsDelay = 500;
-            float randomNumber = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            float jitter = randomNumber * stof(cache_->get("heartbeat_interval"));
-            this_thread::sleep_for(chrono::milliseconds((int)jitter));
-            while(this->p->is_socket_open())
-            {
-                cout << "Sending heartbeat" << endl;
-                try
-                {
-                    this->sendHeartbeat();
-                    this_thread::sleep_for(chrono::milliseconds(waitForMsDelay));
-                    if(cache_->get("receivedHeartbeat") == "false")
-                        cout << "No response received from heartbeat! Attempting to resend heartbeat";
-                    else
-                        this_thread::sleep_for(chrono::milliseconds(stoi(cache_->get("heartbeat_interval")) - waitForMsDelay));
-                } catch (error_code &e) {
-                    cerr << "Failed to send heartbeat due to: " << e;
-                    cerr << "Attempting to re-send heartbeat in 5 seconds." << endl;
-                    this_thread::sleep_for(chrono::seconds(5));
-                }
+        int connectionAttempts = 0;
+        if(!cache_->exist("heartbeat_interval")) {
+            connectionAttempts++;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            if(connectionAttempts > 45) {
+                std::cerr << "Could not find heartbeat_interval in cache" << std::endl;
+                exit(EXIT_FAILURE);
+            } else {
+                heartbeatCycle(sessionShard);
             }
         } else {
-            cerr << "Could not find heartbeat_interval in cache! Failed to send heartbeat." << endl;
-            cerr << "Attempting to re-send heartbeat in 5 seconds." << endl;
-            this_thread::sleep_for(chrono::seconds(5));
-            heartbeatCycle();
+            const int waitForMsDelay = 500;
+
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_real_distribution<double> dis(0, 1);
+
+            double randomNumber = dis(gen);
+            double jitter = randomNumber * std::stod(cache_->get("heartbeat_interval"));
+            std::this_thread::sleep_for(std::chrono::milliseconds((int)jitter));
+
+            while(sessionShard->is_socket_open()) {
+                std::cout << "Sending heartbeat" << std::endl;
+                try {
+                    this->sendHeartbeat(sessionShard);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(waitForMsDelay));
+                    if(cache_->get("receivedHeartbeat") == "false")
+                        std::cout << "No response received from heartbeat! Attempting to resend heartbeat";
+                    else
+                        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(this->cache_->get("heartbeat_interval")) - waitForMsDelay));
+                } catch (std::error_code &e) {
+                    std::cerr << "Failed to send heartbeat due to: " << e;
+                    std::cerr << "Attempting to re-send heartbeat in 5 seconds." << std::endl;
+                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                }
+            }
         }
     }
 
-*/
+    json client::getIdentifyPayload(const int& shard) {
+        json identifyPayload;
+        identifyPayload["op"] = 2;
+        identifyPayload["d"]["token"] = this->cache_->get("token");
+
+        identifyPayload["d"]["properties"]["os"] = this->properties.getOs();
+        identifyPayload["d"]["properties"]["browser"] = this->properties.getBrowser();
+        identifyPayload["d"]["properties"]["device"] = this->properties.getDevice();
+
+        identifyPayload["d"]["compress"] = this->compress;
+        identifyPayload["d"]["large_threshold"] = this->getLargeThreshold();
+
+        json jsonShards = json::array();
+        jsonShards = {shard, std::stoi(this->cache_->get("shards"))};
+        identifyPayload["d"]["shard"] = jsonShards;
+
+        json jsonActivitiesArray = json::array();
+        json jsonActivitiesObject;
+        if(!this->presence.activities.getName().empty()) {
+            jsonActivitiesObject["name"] = this->presence.activities.getName();
+            jsonActivitiesObject["type"] = this->presence.activities.getType();
+        }
+        if(!this->presence.activities.getUrl().empty()) {
+            jsonActivitiesObject["url"] = this->presence.activities.getUrl();
+        }
+
+        jsonActivitiesArray.push_back(jsonActivitiesObject);
+        identifyPayload["d"]["presence"]["activities"] = jsonActivitiesArray;
+
+        identifyPayload["d"]["presence"]["status"] = this->presence.getStatus();
+        identifyPayload["d"]["presence"]["since"] = this->presence.getSince();
+        identifyPayload["d"]["presence"]["afk"] = this->presence.getAfk();
+
+        identifyPayload["d"]["intents"] = this->getIntents();
+
+        return identifyPayload;
+    }
+
 
     void properties::setOs(const std::string &os) {
         this->os = os;
@@ -279,15 +371,9 @@ namespace helios {
         return this->large_threshold;
     }
     void client::setShards(const int shards) {
-        this->shards = shards;
+        this->cache_->put("shards", std::to_string(shards));
     }
-    int client::getShards() const {
-        if(this->shards == -1) {
-            return stoi(cache_->get("shards"));
-        } else {
-            return this->shards;
-        }
-    }
+
     //TODO calculate intents automatically depending on what events they have;
     void client::setIntents(const int intents) {
         this->intents = intents;

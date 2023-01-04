@@ -3,11 +3,11 @@
 
 #include <string>
 #include <iostream>
+#include <random>
 #include <memory>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio.hpp>
-#include <boost/thread/thread.hpp>
 #include <nlohmann/json.hpp>
 
 #include "cache.hpp"
@@ -67,31 +67,40 @@ namespace helios {
 
 class client {
     private:
-        net::io_context ioContext;
         ssl::context sslContext{ssl::context::tlsv12_client};
         std::shared_ptr<cache> cache_;
-        std::shared_ptr<session> p;
-        std::mutex global_stream_lock;
+        std::vector<std::thread> heartbeatThread;
+        std::vector<std::thread> shardedConnections;
+        std::vector<std::shared_ptr<session>> shardedSessions;
+        bool reconnecting = false;
 
         bool compress = false;
         int large_threshold = 50;
-        int shards = -1;
         int intents = 7;
-    public:
-        explicit client();
-        //void heartbeatCycle();
-        //void sendHeartbeat();
-        void run(const std::string& token = "");
 
-        void setToken(const std::string& token);
+        void startHeartbeatCycle(const std::shared_ptr<session>& sessionShard);
+        void stopHeartbeatCycle();
+        void heartbeatCycle(const std::shared_ptr<session>& sessionShard);
+        void sendHeartbeat(const std::shared_ptr<session>& sessionShard);
+        void parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response, const int& shard);
+        void createWsShard(const int& shard, const std::string& host);
+        void reconnect();
+
+        json getIdentifyPayload(const int& shard);
+public:
+        explicit client();
+
+        [[noreturn]] [[maybe_unused]] void run(const std::string& token = "");
+
+        // Identify payload information
+        [[maybe_unused]] void setToken(const std::string& token);
         properties properties;
-        void setLargeThreshold(int threshold);
+        [[maybe_unused]] void setLargeThreshold(int threshold);
         [[nodiscard]] int getLargeThreshold() const;
-        void setShards(int shards);
-        [[nodiscard]] int getShards() const;
+        [[maybe_unused]] void setShards(int shards);
         presence presence;
         //TODO calculate intents automatically depending on what events they have;
-        void setIntents(int intents);
+        [[maybe_unused]] void setIntents(int intents);
         [[nodiscard]] int getIntents() const;
     };
 } // helios
