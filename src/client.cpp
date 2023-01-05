@@ -1,49 +1,38 @@
 #include "client.hpp"
 
 namespace helios {
-    client::client() {
-        std::cout << "Client initialized" << std::endl;
+    client::client(const std::string& token) {
         this->cache_ = std::make_shared<cache>();
-    }
+        cache_->put("token", token);
 
-    [[noreturn]] void client::run(const std::string& token)
-    {
-        if(!cache_->exist("token")){
-            if(token.empty()) {
-                std::cerr << "No token provided" << std::endl;
-                exit(EXIT_FAILURE);
-            } else {
-                cache_->put("token", token);
-            }
-        }
-
-        const int getGatewayResponseCode = apiRequest::getGateway(cache_);
+        const int getGatewayResponseCode = apiRequest::getGateway(this->cache_);
         if(getGatewayResponseCode != 200) {
             std::cerr << "Error getting gateway url" << std::endl;
             std::cerr << "Response code " << std::to_string(getGatewayResponseCode) << std::endl;
             exit(EXIT_FAILURE);
         }
 
+        std::cout << "Client initialized" << std::endl;
+    }
+
+    [[noreturn]] void client::run()
+    {
+        running = true;
         if(!cache_->exist("url")) {
             std::cerr << "Could not find a url in cache to connect to!" << std::endl;
             exit(EXIT_FAILURE);
         }
 
         std::cout << "Attempting to start bot" << std::endl;
-        std::cout << "Creating " << this->cache_->get("shards") << " shards" << std::endl;
         load_root_certificates(this->sslContext);
 
         // Splice url to make usable
         std::string host = cache_->get("url").substr(6, cache_->get("url").length() - 6);
+        cache_->put("host", host);
 
-        while(true) {
-            if(reconnecting) {
-                reconnecting = false;
-                std::string host = cache_->get("url").substr(6, cache_->get("url").length() - 6);
-            }
-            for(int shard = 0; shard < std::stoi(this->cache_->get("shards")); shard++) {
-                this->shardedConnections.emplace_back(&client::createWsShard, this, shard, host);
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        if(enableSharding) {
+            for(auto shardId : shardIdVector) {
+                this->createWsShard(shardId, host);
             }
 
             for(auto& thread : this->shardedConnections) {
@@ -51,10 +40,25 @@ namespace helios {
                     thread.join();
                 }
             }
+        } else {
+            wsShard(-1, host);
         }
     }
 
-    void client::createWsShard(const int& shard, const std::string& host) {
+    void client::createWsShard(const int &shardId, const std::string& host) {
+        this->shardedConnections.emplace_back(&client::wsShard, this, shardId, host);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    void client::createWsShardPool(const std::string& host, const int& delay) {
+        for(int shard = 0; shard < std::stoi(this->cache_->get("shards")); shard++) {
+            createWsShard(shard, host);
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        }
+    }
+
+
+    void client::wsShard(const int &shard, const std::string &host) {
         net::io_context ioContext;
         std::shared_ptr<session> shardSession;
 
@@ -79,9 +83,18 @@ namespace helios {
 
             ioContext.run();
         }
+
         ioContext.stop();
     }
+/*
+    void client::setShardHandler(const shardedClient &shardedClient) {
+        this->shardHandler_ = shardedClient;
+    }
 
+    void client::updateShardHandler(const helios::shardedClient &shardedClient) {
+        this->shardHandler_ = shardedClient;
+    }
+*/
     void client::parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response, const int& shard)
     {
         const json wsResponseJson = json::parse(response);
@@ -184,7 +197,7 @@ namespace helios {
     }
 
     void client::startHeartbeatCycle(const std::shared_ptr<session>& sessionShard) {
-        this->heartbeatThread.emplace_back(&client::heartbeatCycle, this, sessionShard);
+        this->heartbeatThreads.emplace_back(&client::heartbeatCycle, this, sessionShard);
     }
 
     void client::stopHeartbeatCycle() {
@@ -236,10 +249,13 @@ namespace helios {
                 try {
                     this->sendHeartbeat(sessionShard);
                     std::this_thread::sleep_for(std::chrono::milliseconds(waitForMsDelay));
-                    if(cache_->get("receivedHeartbeat") == "false")
+                    if(cache_->get("receivedHeartbeat") == "false") {
                         std::cout << "No response received from heartbeat! Attempting to resend heartbeat";
-                    else
-                        std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(this->cache_->get("heartbeat_interval")) - waitForMsDelay));
+                    } else {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(
+                                std::stoi(this->cache_->get("heartbeat_interval")) - waitForMsDelay));
+                    }
+
                 } catch (std::error_code &e) {
                     std::cerr << "Failed to send heartbeat due to: " << e;
                     std::cerr << "Attempting to re-send heartbeat in 5 seconds." << std::endl;
@@ -254,134 +270,79 @@ namespace helios {
         identifyPayload["op"] = 2;
         identifyPayload["d"]["token"] = this->cache_->get("token");
 
-        identifyPayload["d"]["properties"]["os"] = this->properties.getOs();
-        identifyPayload["d"]["properties"]["browser"] = this->properties.getBrowser();
-        identifyPayload["d"]["properties"]["device"] = this->properties.getDevice();
+        identifyPayload["d"]["properties"]["os"] = this->properties.os;
+        identifyPayload["d"]["properties"]["browser"] = this->properties.browser;
+        identifyPayload["d"]["properties"]["device"] = this->properties.device;
 
         identifyPayload["d"]["compress"] = this->compress;
-        identifyPayload["d"]["large_threshold"] = this->getLargeThreshold();
+        identifyPayload["d"]["large_threshold"] = this->large_threshold;
 
-        json jsonShards = json::array();
-        jsonShards = {shard, std::stoi(this->cache_->get("shards"))};
-        identifyPayload["d"]["shard"] = jsonShards;
+        if(enableSharding) {
+            json jsonShards = json::array();
+            jsonShards = {shard, std::stoi(this->cache_->get("shards"))};
+            identifyPayload["d"]["shard"] = jsonShards;
+        }
 
         json jsonActivitiesArray = json::array();
         json jsonActivitiesObject;
-        if(!this->presence.activities.getName().empty()) {
-            jsonActivitiesObject["name"] = this->presence.activities.getName();
-            jsonActivitiesObject["type"] = this->presence.activities.getType();
+        if(!this->presence.activities.name.empty()) {
+            jsonActivitiesObject["name"] = this->presence.activities.name;
+            jsonActivitiesObject["type"] = this->presence.activities.type;
         }
-        if(!this->presence.activities.getUrl().empty()) {
-            jsonActivitiesObject["url"] = this->presence.activities.getUrl();
+        if(!this->presence.activities.url.empty()) {
+            jsonActivitiesObject["url"] = this->presence.activities.url;
         }
 
         jsonActivitiesArray.push_back(jsonActivitiesObject);
         identifyPayload["d"]["presence"]["activities"] = jsonActivitiesArray;
 
-        identifyPayload["d"]["presence"]["status"] = this->presence.getStatus();
-        identifyPayload["d"]["presence"]["since"] = this->presence.getSince();
-        identifyPayload["d"]["presence"]["afk"] = this->presence.getAfk();
+        identifyPayload["d"]["presence"]["status"] = this->presence.status;
+        identifyPayload["d"]["presence"]["since"] = this->presence.since;
+        identifyPayload["d"]["presence"]["afk"] = this->presence.afk;
 
-        identifyPayload["d"]["intents"] = this->getIntents();
+        identifyPayload["d"]["intents"] = this->intents;
 
         return identifyPayload;
     }
 
-
     void properties::setOs(const std::string &os) {
         this->os = os;
-    }
-
-    std::string properties::getOs() const {
-        return this->os;
     }
 
     void properties::setBrowser(const std::string &browser) {
         this->browser = browser;
     }
 
-    std::string properties::getBrowser() const {
-        return this->browser;
-    }
-
     void properties::setDevice(const std::string &device) {
         this->device = device;
-    }
-
-    std::string properties::getDevice() const {
-        return this->device;
     }
 
     void activities::setName(const std::string &name) {
         this->name = name;
     }
 
-    std::string activities::getName() const {
-        return this->name;
-    }
-
     void activities::setType(const int& type) {
         this->type = type;
-    }
-
-    int activities::getType() const {
-        return this->type;
     }
 
     void activities::setUrl(const std::string& url){
         this->url = url;
     }
 
-    std::string activities::getUrl() const {
-        return this->url;
-    }
-
     void presence::setSince(const int& since) {
         this->since = since;
-    }
-
-    int presence::getSince() const {
-        return this->since;
     }
 
     void presence::setStatus(const std::string& status) {
         this->status = status;
     }
 
-    std::string presence::getStatus() const {
-        return this->status;
-    }
     void presence::setAfk(const bool& afk) {
         this->afk = afk;
-    }
-
-    bool presence::getAfk() const {
-        return this->afk;
-    }
-
-    void client::setToken(const std::string& token) {
-        this->cache_->put("token", token);
     }
 
     void client::setLargeThreshold(const int threshold) {
         this->large_threshold = threshold;
     }
-
-    int client::getLargeThreshold() const {
-        return this->large_threshold;
-    }
-    void client::setShards(const int shards) {
-        this->cache_->put("shards", std::to_string(shards));
-    }
-
-    //TODO calculate intents automatically depending on what events they have;
-    void client::setIntents(const int intents) {
-        this->intents = intents;
-    }
-
-    int client::getIntents() const {
-        return this->intents;
-    }
-
 
 } // helios

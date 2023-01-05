@@ -1,5 +1,5 @@
 #include "cache.hpp"
-
+#include <iostream>
 cache::cache()= default;;
 
 void cache::put(const std::string &key, const std::string &val) {

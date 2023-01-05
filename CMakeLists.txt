@@ -30,6 +30,7 @@ target_sources(${PROJECT_NAME}
         include/request.hpp
         src/discordApiRequest.cpp
         include/discordApiRequest.hpp
+        src/sharding.cpp
         )
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
@@ -40,9 +41,9 @@ target_include_directories(${PROJECT_NAME}
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-# without it public headers won't get installed
 set(public_headers
         include/client.hpp
         include/event.hpp
+        include/sharding.hpp
         )
 

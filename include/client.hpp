@@ -20,60 +20,49 @@ namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using json = nlohmann::json;
 
 namespace helios {
+    class client;
+    class shardedClient;
 
     class properties {
     protected:
+        friend class client;
         std::string browser;
         std::string device;
         std::string os;
     public:
-        void setOs(const std::string& os);
-        [[nodiscard]] std::string getOs() const;
-        void setBrowser(const std::string& browser);
-        [[nodiscard]] std::string getBrowser() const;
-        void setDevice(const std::string& device);
-        [[nodiscard]] std::string getDevice() const;
+        [[maybe_unused]] void setOs(const std::string& os);
+        [[maybe_unused]] void setBrowser(const std::string& browser);
+        [[maybe_unused]] void setDevice(const std::string& device);
     };
 
     class activities {
     private:
+        friend class client;
         std::string name;
-        int type;
+        int type = 0;
         std::string url;
     public:
         //void setActivity(const std::string& name, const int type, const std::string& url = "");
-        void setName(const std::string& name);
-        [[nodiscard]] std::string getName() const;
-        void setType(const int& type);
-        [[nodiscard]] int getType() const;
-        void setUrl(const std::string& url);
-        [[nodiscard]] std::string getUrl() const;
+        [[maybe_unused]] void setName(const std::string& name);
+        [[maybe_unused]] void setType(const int& type);
+        [[maybe_unused]] void setUrl(const std::string& url);
     };
 
     class presence {
     private:
+        friend class client;
         int since = 0;
         std::string status;
         bool afk = false;
     public:
-        void setSince(const int& since);
-        [[nodiscard]] int getSince() const;
+        [[maybe_unused]] void setSince(const int& since);
         activities activities;
-        void setStatus(const std::string& status);
-        [[nodiscard]] std::string getStatus() const;
-        void setAfk(const bool& afk);
-        [[nodiscard]] bool getAfk() const;
+        [[maybe_unused]] void setStatus(const std::string& status);
+        [[maybe_unused]] void setAfk(const bool& afk);
     };
 
 class client {
     private:
-        ssl::context sslContext{ssl::context::tlsv12_client};
-        std::shared_ptr<cache> cache_;
-        std::vector<std::thread> heartbeatThread;
-        std::vector<std::thread> shardedConnections;
-        std::vector<std::shared_ptr<session>> shardedSessions;
-        bool reconnecting = false;
-
         bool compress = false;
         int large_threshold = 50;
         int intents = 7;
@@ -83,25 +72,32 @@ class client {
         void heartbeatCycle(const std::shared_ptr<session>& sessionShard);
         void sendHeartbeat(const std::shared_ptr<session>& sessionShard);
         void parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response, const int& shard);
-        void createWsShard(const int& shard, const std::string& host);
+        void wsShard(const int& shard, const std::string& host);
         void reconnect();
 
         json getIdentifyPayload(const int& shard);
-public:
-        explicit client();
+protected:
+        bool enableSharding = false;
+        bool running = false;
+        bool reconnecting = false;
 
-        [[noreturn]] [[maybe_unused]] void run(const std::string& token = "");
+        ssl::context sslContext{ssl::context::tlsv12_client};
+        std::shared_ptr<cache> cache_;
+        std::vector<int> shardIdVector;
+        std::vector<std::thread> heartbeatThreads;
+        std::vector<std::thread> shardedConnections;
+        std::vector<std::shared_ptr<session>> shardedSessions;
+        void createWsShardPool(const std::string& host, const int& delay = 250);
+        void createWsShard(const int& shardId, const std::string& host);
+public:
+        explicit client(const std::string& token);
+
+        [[noreturn]] [[maybe_unused]] void run();
 
         // Identify payload information
-        [[maybe_unused]] void setToken(const std::string& token);
-        properties properties;
         [[maybe_unused]] void setLargeThreshold(int threshold);
-        [[nodiscard]] int getLargeThreshold() const;
-        [[maybe_unused]] void setShards(int shards);
+        properties properties;
         presence presence;
-        //TODO calculate intents automatically depending on what events they have;
-        [[maybe_unused]] void setIntents(int intents);
-        [[nodiscard]] int getIntents() const;
     };
 } // helios
 
