@@ -149,16 +149,21 @@ void session::on_read(
     asyncQueue();
 }
 
-void session::closeSession()
+void session::onClose(beast::error_code ec) {
+    if(ec) return fail(ec, "close");
+};
+
+void session::asyncCloseSession(const websocket::close_code& closeCode)
 {
-    boost::system::error_code ec;
-    if(is_socket_open())
-    {
-        ws_.close(websocket::close_code::normal, ec);
-    }
-    if(ec) return fail(ec, "write");
+    if(is_socket_open()) ws_.async_close(closeCode, beast::bind_front_handler(&session::onClose, shared_from_this()));
     buffer_.consume(buffer_.size());
 
+    reinterpret_cast<boost::asio::io_context &>(ws_.get_executor().context()).stop();
+}
+
+
+std::uint16_t session::getCloseCode() {
+    return ws_.reason().code;
 }
 
 bool session::is_socket_open()

@@ -17,6 +17,9 @@ FetchContent_Populate(json)
 include_directories(${json_SOURCE_DIR}/include/)
 include_directories(${MYSQL_CONNECTOR_CPP_ROOT_DIR}/include/jdbc/)
 
+add_executable(heliosTest test/heliosTest1.cpp)
+target_link_libraries(heliosTest helios)
+
 add_library(${PROJECT_NAME} STATIC)
 
 target_sources(${PROJECT_NAME}
@@ -31,6 +34,7 @@ target_sources(${PROJECT_NAME}
         src/discordApiRequest.cpp
         include/discordApiRequest.hpp
         src/sharding.cpp
+        src/event.cpp
         )
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)

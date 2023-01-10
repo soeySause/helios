@@ -55,7 +55,10 @@ public:
     bool is_socket_open();
     void enable_async_read();
     std::string getResponse();
-    void closeSession();
+
+    void onClose(beast::error_code ec);
+    void asyncCloseSession(const websocket::close_code& closeCode = websocket::close_code::normal);
+    std::uint16_t getCloseCode();
 
     void asyncQueue(const std::string& payload = "");
 };

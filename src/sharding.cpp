@@ -5,6 +5,7 @@ namespace helios {
         this->cache_->put("shards", std::to_string(shards));
         this->enableSharding = true;
     }
+
     shardedClient::shardedClient(const std::string &token, const std::string& type) : client(token) {
         if(type != "auto") {
             std::cerr << "Unknown shard type " << type << std::endl;
@@ -14,38 +15,38 @@ namespace helios {
     }
 
     void shardedClient::createShard(const int &shardId) {
-        if(this->running) {
+        //if(this->running) {
             this->createWsShard(shardId, this->cache_->get("host"));
-        } else {
-            this->shardIdVector.emplace_back(shardId);
-        }
+        //} else {
+            this->startupShards.emplace_back(shardId);
+        //}
     }
 
     void shardedClient::pool(const int &delay) {
-        if(running) {
+        //if(running) {
             for(int shard = 0; shard < std::stoi(this->cache_->get("shards")); shard++) {
                 createWsShard(shard, this->cache_->get("host"));
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
-        } else {
+        //} else {
             for(int shardId = 0; shardId < std::stoi(this->cache_->get("shards")); shardId++) {
-                shardIdVector.emplace_back(shardId);
+                startupShards.emplace_back(shardId);
             }
-        }
+        //}
     }
 
     void shardedClient::deleteShard(const int &shardId) {
-        const auto positionInVector = std::find(shardIdVector.begin(), shardIdVector.end(), shardId);
-        if(positionInVector == shardIdVector.end()) {
+        const auto positionInVector = std::find(startupShards.begin(), startupShards.end(), shardId);
+        if(positionInVector == startupShards.end()) {
             std::cerr << "Shard id " + std::to_string(shardId) + "not found in vector!" << std::endl;
             exit(EXIT_FAILURE);
         }
 
-        if(running) {
+        //if(running) {
 
-        } else {
-            shardIdVector.erase(positionInVector);
-        }
+        //} else {
+            startupShards.erase(positionInVector);
+        //}
     }
 
     void shardedClient::restartShard(const int &shardId) {
