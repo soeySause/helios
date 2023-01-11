@@ -3,6 +3,9 @@
 // Report a failure
 void fail(beast::error_code ec, char const* what)
 {
+    char const* w = "connect";
+    if(what == w)
+        exit(1);
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
@@ -165,6 +168,11 @@ void session::asyncCloseSession(const websocket::close_code& closeCode)
 std::uint16_t session::getCloseCode() {
     return ws_.reason().code;
 }
+
+beast::static_string<123, char> session::getCloseReason() {
+    return ws_.reason().reason;
+}
+
 
 bool session::is_socket_open()
 {

@@ -17,6 +17,7 @@
 #include "session.hpp"
 #include "discordApiRequest.hpp"
 #include "event.hpp"
+#include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
@@ -146,11 +147,15 @@ namespace helios {
 
     };
 
-    struct shard {
-        int shardId;
+    struct shardStruct {
+        int shardId{};
         int seq = 0;
         bool running = false;
+        bool reconnect = false;
+        bool fullReconnect = false;
+        bool deleteShard = false;
 
+        std::weak_ptr<session> sessionShard;
         std::unique_ptr<std::thread> shardThread;
         std::thread::id shardThreadId;
 
@@ -163,10 +168,20 @@ namespace helios {
         std::string sessionId;
         std::string resumeUrl;
 
-        bool reconnecting = false;
         std::promise<bool> exit;
         std::future<bool> exitFuture = exit.get_future();
-        std::uint16_t closeCode;
+        beast::static_string<123, char> closeReason;
+        std::uint16_t closeCode{};
+    };
+
+    class shard {
+    private:
+        friend class client;
+        friend class shardedClient;
+        std::unique_ptr<shardStruct> shardStructPtr = std::make_unique<shardStruct>();;
+    public:
+        [[maybe_unused]] void deleteShard();
+        [[maybe_unused]] void reconnect();
     };
 
     class client {
@@ -191,9 +206,12 @@ namespace helios {
 
         ssl::context sslContext{ssl::context::tlsv12_client};
         std::shared_ptr<cache> cache_;
-        std::vector<std::unique_ptr<shard>> shardVector;
-        std::vector<int> startupShards;
-        void createWsShard(const int& shardId, const std::string& host, const bool& reconnecting = false, const std::string& sessionId = "", const int& seq = 0);
+        std::vector<std::shared_ptr<shard>> shardClass;
+        void createWsShard(const std::shared_ptr<shard>& shard);
+        void reconnectShard(const std::shared_ptr<shard>& shard);
+        void fullReconnectShard(const std::shared_ptr<shard>& shard);
+        void deleteShard(const std::shared_ptr<shard>& shardR);
+
     public:
         explicit client(const std::string& token);
 

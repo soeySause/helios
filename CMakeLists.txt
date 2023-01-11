@@ -35,6 +35,7 @@ target_sources(${PROJECT_NAME}
         include/discordApiRequest.hpp
         src/sharding.cpp
         src/event.cpp
+        include/heliosException.hpp
         )
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)

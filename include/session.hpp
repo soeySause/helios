@@ -59,6 +59,7 @@ public:
     void onClose(beast::error_code ec);
     void asyncCloseSession(const websocket::close_code& closeCode = websocket::close_code::normal);
     std::uint16_t getCloseCode();
+    beast::static_string<123, char> getCloseReason();
 
     void asyncQueue(const std::string& payload = "");
 };

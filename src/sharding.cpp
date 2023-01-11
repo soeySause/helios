@@ -1,68 +1,97 @@
 #include "sharding.hpp"
 
 namespace helios {
-    shardedClient::shardedClient(const std::string &token, const int &shards) : client(token) {
+    [[maybe_unused]] shardedClient::shardedClient(const std::string &token, const int &shards) : client(token) {
         this->cache_->put("shards", std::to_string(shards));
         this->enableSharding = true;
     }
 
-    shardedClient::shardedClient(const std::string &token, const std::string& type) : client(token) {
+    [[maybe_unused]] shardedClient::shardedClient(const std::string &token, const std::string& type) : client(token) {
         if(type != "auto") {
-            std::cerr << "Unknown shard type " << type << std::endl;
-            exit(EXIT_FAILURE);
+            throw(heliosException(70, "Unknown shard type"));
         }
+
         this->enableSharding = true;
     }
 
-    void shardedClient::createShard(const int &shardId) {
-        //if(this->running) {
-            this->createWsShard(shardId, this->cache_->get("host"));
-        //} else {
-            this->startupShards.emplace_back(shardId);
-        //}
-    }
+    std::shared_ptr<shard> shardedClient::createShard(const int &shardId) {
+        std::shared_ptr<shard> newShard = std::make_shared<shard>();
+        newShard->shardStructPtr->shardId = shardId;
 
-    void shardedClient::pool(const int &delay) {
-        //if(running) {
-            for(int shard = 0; shard < std::stoi(this->cache_->get("shards")); shard++) {
-                createWsShard(shard, this->cache_->get("host"));
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-        //} else {
-            for(int shardId = 0; shardId < std::stoi(this->cache_->get("shards")); shardId++) {
-                startupShards.emplace_back(shardId);
-            }
-        //}
-    }
+        this->shardClass.emplace_back(newShard);
 
-    void shardedClient::deleteShard(const int &shardId) {
-        const auto positionInVector = std::find(startupShards.begin(), startupShards.end(), shardId);
-        if(positionInVector == startupShards.end()) {
-            std::cerr << "Shard id " + std::to_string(shardId) + "not found in vector!" << std::endl;
-            exit(EXIT_FAILURE);
+        if(this->shardClass.at(0)->shardStructPtr->running) {
+            this->createWsShard(newShard);
         }
 
-        //if(running) {
-
-        //} else {
-            startupShards.erase(positionInVector);
-        //}
+        return newShard;
     }
 
-    void shardedClient::restartShard(const int &shardId) {
+    [[maybe_unused]] void shardedClient::removeShard(const std::shared_ptr<shard>& targetShard) {
+        if(targetShard->shardStructPtr->running) {
+            throw(heliosException(80, "Cannot remove shard that is not running"));
+        }
 
+        auto shardPositionInVector = std::find_if(this->shardClass.begin(), this->shardClass.end(), [&targetShard](const std::shared_ptr<shard>& ts)
+        { return ts->shardStructPtr == targetShard->shardStructPtr; });
+
+        if (shardPositionInVector != this->shardClass.end()) {
+            this->shardClass.erase(shardPositionInVector);
+        } else {
+            std::stringstream targetShardAddress;
+            targetShardAddress << targetShard.get();
+
+            const std::string error = "Cannot find shard " + targetShardAddress.str();
+            throw(heliosException(81, error));
+        }
     }
 
-    void shardedClient::restartAllShards() {
 
+    std::vector<std::shared_ptr<shard>> shardedClient::pool(const int &delay) {
+        std::vector<std::shared_ptr<shard>> shardVector;
+        for(int shardId = 0; shardId < std::stoi(this->cache_->get("shards")); shardId++) {
+            shardVector.emplace_back(createShard(shardId));
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        }
+
+        return shardVector;
     }
 
-    void shardedClient::reconnectShard(const int &shardId) {
-
+    [[maybe_unused]] void shard::deleteShard() {
+        if(this->shardStructPtr->running) {
+            std::shared_ptr<session> sessionShard = this->shardStructPtr->sessionShard.lock();
+            if (sessionShard) {
+                this->shardStructPtr->deleteShard = true;
+                sessionShard->asyncCloseSession();
+            } else {
+                throw(heliosException(83, "Error deleting shard. Missing websocket connection."));
+            }
+        } else {
+            throw(heliosException(80, "Cannot delete shard that is not running"));
+        }
     }
 
-    void shardedClient::reconnectAllShards() {
+    void shard::reconnect() {
+        if(this->shardStructPtr->running) {
+            std::shared_ptr<session> sessionShard = this->shardStructPtr->sessionShard.lock();
+            if (sessionShard) {
+                this->shardStructPtr->fullReconnect = true;
+                sessionShard->asyncCloseSession();
+            } else {
+                throw(heliosException(83, "Error reconnecting shard. Missing websocket connection."));
+            }
+        } else {
+            throw(heliosException(80, "Cannot reconnect shard that is not running"));
+        }
+    }
 
+    [[maybe_unused]] void shardedClient::reconnectAllShards() {
+        if(!this->shardClass.back()->shardStructPtr->running) {
+            throw(heliosException(80, "Cannot reconnect shard that is not running"));
+        }
+
+        for(auto& shard : this->shardClass ) {
+            shard->reconnect();
+        }
     }
 }
-

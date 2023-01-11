@@ -8,6 +8,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 using json = nlohmann::json;
 
 int request::httpsResponseCode;
+std::string request::httpsResponseReason;
 
 int request::getRequest(const std::string& host, const std::string& target, const std::shared_ptr<cache>& cache_, const std::string& authorization, std::vector<std::string> whatToCache)
 {
@@ -42,7 +43,6 @@ int request::getRequest(const std::string& host, const std::string& target, cons
 
     if(!authorization.empty()) req.set(http::field::authorization, "Bot " + authorization);
 
-    try {
 
         // Send the HTTP request to the remote host
         http::write(sock, req);
@@ -50,8 +50,15 @@ int request::getRequest(const std::string& host, const std::string& target, cons
         http::response<http::string_body> res;
         http::read(sock, buffer, res);
 
+        httpsResponseCode = int((unsigned int)res.result_int());
+        httpsResponseReason = res.body();
+
+        if(httpsResponseCode != 200) {
+            throw(helios::heliosException(httpsResponseCode, httpsResponseReason));
+        }
+
+
         const json jsonResponse = json::parse(res.body());
-        std::cout << res.body() << std::endl;
 
         // For if you need to cache a non json message
         if(whatToCache[0] == "*") cache_->put(whatToCache[1], jsonResponse.dump());
@@ -67,16 +74,11 @@ int request::getRequest(const std::string& host, const std::string& target, cons
                 cache_->put(key, keyValue);
             } else {
                 std::cerr << "could not find key " + key + " in response " + res.body() << std::endl;
+                throw(helios::heliosException(61, "Failed to cache key " + key));
             }
         }
 
-        request::httpsResponseCode = int((unsigned int)res.result_int());
-    } catch (const std::exception& error) {
-        std::cerr << error.what() << std::endl;
-    }
-    beast::error_code ec;
-    sock.shutdown(ec);
-    return request::httpsResponseCode;
+        return request::httpsResponseCode;
 }
 
 int request::postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)
