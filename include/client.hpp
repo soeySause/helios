@@ -67,9 +67,9 @@ namespace helios {
     class onEvent {
     private:
         friend class client;
-        std::function<void(eventData)> readyFunction;
+        std::function<void(readyEvent)> readyFunction;
     public:
-        [[maybe_unused]] void ready(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void ready(const std::function<void(readyEvent)>& userFunction);
         [[maybe_unused]] void resumed(const std::function<void(eventData)>& userFunction);
         [[maybe_unused]] void reconnect(const std::function<void(eventData)>& userFunction);
 
@@ -155,6 +155,7 @@ namespace helios {
         bool fullReconnect = false;
         bool deleteShard = false;
 
+        eventData eventData;
         std::weak_ptr<session> sessionShard;
         std::unique_ptr<std::thread> shardThread;
         std::thread::id shardThreadId;

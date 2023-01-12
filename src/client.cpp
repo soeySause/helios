@@ -4,8 +4,7 @@ namespace helios {
     client::client(const std::string& token) {
         this->cache_ = std::make_shared<cache>();
         cache_->put("token", token);
-
-        const int getGatewayResponseCode = apiRequest::getGateway(this->cache_);
+        apiRequest::getGateway(this->cache_);
     }
 
     [[maybe_unused]] [[noreturn]] void client::run() {
@@ -95,7 +94,7 @@ namespace helios {
         std::unique_ptr<shardStruct> newShardStructPtr = std::make_unique<shardStruct>();
         newShardStructPtr->shardId = shardR->shardStructPtr->shardId;
         newShardStructPtr->resumeUrl = shardR->shardStructPtr->resumeUrl;
-        newShardStructPtr->reconnect = shardR->shardStructPtr->reconnect;
+        newShardStructPtr->reconnect = true;
         newShardStructPtr->running = shardR->shardStructPtr->running;
         newShardStructPtr->sessionId = shardR->shardStructPtr->sessionId;
         newShardStructPtr->seq = shardR->shardStructPtr->seq;
@@ -293,32 +292,18 @@ namespace helios {
             }
 
             if(executeEvent == "READY") {
-                eventData readyEventData = eventData::readyEventData(wsResponseJson);
-                this->onEvent.readyFunction(readyEventData);
 
                 for (auto& shard : this->shardClass) {
                     if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
                         const std::string resumeGatewayUrl = wsResponseJson["d"]["resume_gateway_url"];
                         shard->shardStructPtr->resumeUrl = resumeGatewayUrl.substr(6, resumeGatewayUrl.length() - 6);
                         shard->shardStructPtr->sessionId = wsResponseJson["d"]["session_id"];
+
+                        readyEvent readyEventData = shard->shardStructPtr->eventData.getReadyEventData(wsResponseJson["d"]);
+                        this->onEvent.readyFunction(readyEventData);
+                        break;
                     }
                 }
-
-                /*
-                        bool hasGuildMemberIntents = false;
-                        std::string binaryIntents;
-                        int intentsInt = 14;
-
-                        while(intentsInt != 0) {
-                            if (intentsInt % 2 == 0) {
-                                binaryIntents += "0";
-                            } else {
-                                binaryIntents += "1";
-                            }
-                            intentsInt /= 2;
-                        }
-                        return;
-                         */
             }
 
             if(executeEvent == "RESUMED") {
@@ -520,7 +505,7 @@ namespace helios {
         this->large_threshold = threshold;
     }
 
-    [[maybe_unused]] void onEvent::ready(const std::function<void(eventData)>& userFunction) {
+    [[maybe_unused]] void onEvent::ready(const std::function<void(readyEvent)>& userFunction) {
         this->readyFunction = userFunction;
     }
 

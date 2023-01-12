@@ -3,9 +3,9 @@
 // Report a failure
 void fail(beast::error_code ec, char const* what)
 {
-    char const* w = "connect";
-    if(what == w)
+    if(std::to_string(*what) == "connect") {
         exit(1);
+    }
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
