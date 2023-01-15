@@ -10,7 +10,7 @@ using json = nlohmann::json;
 int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
-int request::getRequest(const std::string& host, const std::string& target, const std::shared_ptr<cache>& cache_, const std::string& authorization, std::vector<std::string> whatToCache)
+std::string request::getRequest(const std::string& host, const std::string& target, const std::shared_ptr<cache>& cache_, const std::string& authorization, std::vector<std::string> whatToCache)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -78,7 +78,7 @@ int request::getRequest(const std::string& host, const std::string& target, cons
             }
         }
 
-        return request::httpsResponseCode;
+        return res.body();
 }
 
 int request::postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)

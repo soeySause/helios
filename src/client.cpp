@@ -136,45 +136,39 @@ namespace helios {
 
 
 
-    void client::createWsShard(const std::shared_ptr<shard>& shardR) {
+    void client::createWsShard(const std::shared_ptr<shard>& shard) {
         std::string host;
 
-        if(shardR->shardStructPtr->reconnect) {
-            host = shardR->shardStructPtr->resumeUrl;
+        if(shard->shardStructPtr->reconnect) {
+            host = shard->shardStructPtr->resumeUrl;
         } else {
             host = cache_->get("host");
         }
 
         std::unique_ptr<std::thread> newWsShard;
-        newWsShard = std::make_unique<std::thread>(&client::wsShard, this, host);
-        shardR->shardStructPtr->shardThread.swap(newWsShard);
-        shardR->shardStructPtr->shardThreadId = shardR->shardStructPtr->shardThread->get_id();
+        newWsShard = std::make_unique<std::thread>(&client::wsShard, this, host, shard);
+        shard->shardStructPtr->shardThread.swap(newWsShard);
+        shard->shardStructPtr->shardThreadId = shard->shardStructPtr->shardThread->get_id();
     }
 
-    void client::wsShard(const std::string &host) {
+    void client::wsShard(const std::string &host, const std::shared_ptr<shard>& shard) {
         net::io_context ioContext;
         std::shared_ptr<session> sessionShard = std::make_shared<session>(ioContext, this->sslContext, this->cache_);
         json reconnectingPayload;
 
-        for (auto& shard : this->shardClass) {
-            if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                std::weak_ptr<session> weakShard(sessionShard);
-                shard->shardStructPtr->sessionShard.swap(weakShard);
+        shard->shardStructPtr->sessionShard = sessionShard->weak_from_this();
 
-                if(shard->shardStructPtr->reconnect) {
-                    reconnectingPayload["op"] = 6;
-                    reconnectingPayload["d"]["token"] = this->cache_->get("token");
-                    reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
-                    reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
-                }
-                break;
-            }
+        if(shard->shardStructPtr->reconnect) {
+            reconnectingPayload["op"] = 6;
+            reconnectingPayload["d"]["token"] = this->cache_->get("token");
+            reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
+            reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
 
             if(shard == this->shardClass.back()) {
                 std::stringstream targetShardAddress;
                 targetShardAddress << shard->shardStructPtr->shardThreadId;
 
-                const std::string error = "Cannot find thread " + targetShardAddress.str();
+                const std::string error = "Failed to connect to websocket. Cannot find thread " + targetShardAddress.str();
                 throw(heliosException(82, error));
             }
         }
@@ -192,7 +186,7 @@ namespace helios {
 
             const std::string wsResponse = sessionShard->getResponse();
             std::cout << wsResponse << std::endl;
-            this->parseResponse(sessionShard, wsResponse);
+            this->parseResponse(shard, wsResponse);
 
             ioContext.run();
         }
@@ -200,21 +194,17 @@ namespace helios {
         // After this point, the connection is closed and cannot be reopened without creating a new session
         if(!ioContext.stopped()) ioContext.stop();
 
-        for (auto& shard : this->shardClass) {
-            if (shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                shard->shardStructPtr->closeCode = sessionShard->getCloseCode();
-                shard->shardStructPtr->closeReason = sessionShard->getCloseReason();
-                shard->shardStructPtr->exit.set_value(true);
-                stopHeartbeatCycle();
+        shard->shardStructPtr->closeCode = sessionShard->getCloseCode();
+        shard->shardStructPtr->closeReason = sessionShard->getCloseReason();
+        shard->shardStructPtr->exit.set_value(true);
+        stopHeartbeatCycle(shard);
 
-                this->updateCondition.notify_one();
-                break;
-            }
-        }
+        this->updateCondition.notify_one();
     }
 
-    void client::parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response)
+    void client::parseResponse(const std::shared_ptr<shard>& shard, const std::string& response)
     {
+        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
         const json wsResponseJson = json::parse(response);
         const int opCode = wsResponseJson["op"];
         std::string event;
@@ -223,15 +213,11 @@ namespace helios {
             case 0: {
                 // Case 0 is for sending and receiving events
                 event = wsResponseJson["t"];
-                for (auto& shard : this->shardClass) {
-                    if (shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        shard->shardStructPtr->seq++;
-                    }
-                }
+                shard->shardStructPtr->seq++;
                 break;
             }
             case 1: {
-                sendHeartbeat(sessionShard);
+                sendHeartbeat(shard);
                 break;
             }
             case 7: {
@@ -249,22 +235,13 @@ namespace helios {
             }
             case 10: {
                 // Case 0 is sent on initial connection with discord
-                cache_->put("heartbeat_interval", wsResponseJson["d"]["heartbeat_interval"].dump());
-                if(wsResponseJson["s"].is_null()) {
-                    cache_->put("s", "0");
-                } else {
-                    cache_->put("s", wsResponseJson["s"].dump());
-                }
+                shard->shardStructPtr->heartbeatInterval = std::stoi(wsResponseJson["d"]["heartbeat_interval"].dump());
                 event = "ON_ENABLE";
                 break;
             }
             case 11: {
                 // Case 11 is sent on receiving heartbeats
-                for (auto& shard : this->shardClass) {
-                    if (shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        shard->shardStructPtr->receivedHeartbeat = true;
-                    }
-                }
+                shard->shardStructPtr->receivedHeartbeat = true;
                 break;
             }
             default: {
@@ -277,150 +254,107 @@ namespace helios {
             const std::string& executeEvent = event;
 
             if(executeEvent == "ON_ENABLE"){
-                startHeartbeatCycle(sessionShard);
-                for (auto& shard : this->shardClass) {
-                    if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        if(!shard->shardStructPtr->reconnect) {
-                            json identifyPayload = getIdentifyPayload(shard->shardStructPtr->shardId);
-                            sessionShard->asyncQueue(identifyPayload.dump());
-                        }
-                    shard->shardStructPtr->reconnect = false;
-                    break;
-                    }
+                startHeartbeatCycle(shard);
+                if(!shard->shardStructPtr->reconnect) {
+                    json identifyPayload = getIdentifyPayload(shard->shardStructPtr->shardId);
+                    sessionShard->asyncQueue(identifyPayload.dump());
                 }
+                shard->shardStructPtr->reconnect = false;
                 return;
             }
 
             if(executeEvent == "READY") {
+                const std::string resumeGatewayUrl = wsResponseJson["d"]["resume_gateway_url"];
+                shard->shardStructPtr->resumeUrl = resumeGatewayUrl.substr(6, resumeGatewayUrl.length() - 6);
+                shard->shardStructPtr->sessionId = wsResponseJson["d"]["session_id"];
 
-                for (auto& shard : this->shardClass) {
-                    if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        const std::string resumeGatewayUrl = wsResponseJson["d"]["resume_gateway_url"];
-                        shard->shardStructPtr->resumeUrl = resumeGatewayUrl.substr(6, resumeGatewayUrl.length() - 6);
-                        shard->shardStructPtr->sessionId = wsResponseJson["d"]["session_id"];
-
-                        readyEvent readyEventData = shard->shardStructPtr->eventData.getReadyEventData(wsResponseJson["d"]);
-                        this->onEvent.readyFunction(readyEventData);
-                        break;
-                    }
-                }
+                readyEvent readyEventData = shard->shardStructPtr->eventData.getReadyEventData(wsResponseJson["d"]);
+                this->onEvent.readyFunction(readyEventData);
             }
 
             if(executeEvent == "RESUMED") {
-
+                resumedEvent resumedEventData = shard->shardStructPtr->eventData.getResumedEventData(wsResponseJson["d"]);
+                this->onEvent.resumedFunction(resumedEventData);
             }
+
             if(executeEvent == "RECONNECT") {
-                for (auto& shard : this->shardClass) {
-                    if (shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        shard->shardStructPtr->reconnect = true;
-                        sessionShard->asyncCloseSession();
-                    }
-                }
+                shard->shardStructPtr->reconnect = true;
+                sessionShard->asyncCloseSession();
                 return;
             }
 
             if(executeEvent == "DISCONNECT") {
-                for (auto& shard : this->shardClass) {
-                    if (shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-                        shard->shardStructPtr->fullReconnect = true;
-                        sessionShard->asyncCloseSession();
-                    }
-                }
+                shard->shardStructPtr->fullReconnect = true;
+                sessionShard->asyncCloseSession();
                 return;
             }
-        }
-    }
 
-    void client::startHeartbeatCycle(const std::shared_ptr<session>& sessionShard) {
-        for (auto& shard : this->shardClass) {
-            // Find and update shardVector with heartbeat thread
-            if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
+            if(executeEvent == "GUILD_CREATE"){
+                guildCreatEvent guildCreateData = shard->shardStructPtr->eventData.getGuildCreateEventData(wsResponseJson["d"]);
+                this->onEvent.guildCreateFunction(guildCreateData);
 
-                std::unique_ptr<std::thread> heartbeatThread;
-                heartbeatThread = std::make_unique<std::thread>(&client::heartbeatCycle, this, sessionShard);
-                shard->shardStructPtr->heartbeatThread.swap(heartbeatThread);
-
-                shard->shardStructPtr->heartbeatThreadId = shard->shardStructPtr->heartbeatThread->get_id();
-                break;
-            }
-
-            if(shard == this->shardClass.back()) {
-                std::stringstream targetShardAddress;
-                targetShardAddress << shard->shardStructPtr->shardThreadId;
-
-                const std::string error = "Cannot find thread " + targetShardAddress.str();
-                throw(heliosException(82, error));
             }
         }
     }
 
-    void client::stopHeartbeatCycle() {
-        for (auto& shard : this->shardClass) {
+    void client::startHeartbeatCycle(const std::shared_ptr<shard>& shard) {
+        std::unique_ptr<std::thread> heartbeatThread;
+
+        heartbeatThread = std::make_unique<std::thread>(&client::heartbeatCycle, this, shard);
+        shard->shardStructPtr->heartbeatThread.swap(heartbeatThread);
+
+        shard->shardStructPtr->heartbeatThreadId = shard->shardStructPtr->heartbeatThread->get_id();
+    }
+
+    void client::stopHeartbeatCycle(const std::shared_ptr<shard>& shard) {
             if(shard->shardStructPtr->heartbeatThreadId == std::thread::id()) return;
             if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
             shard->shardStructPtr->exitHeartbeat.set_value(true);
             if(shard->shardStructPtr->heartbeatThread->joinable()) {
                 shard->shardStructPtr->heartbeatThread->join();
             }
-                break;
-            }
         }
     }
 
-    void client::sendHeartbeat(const std::shared_ptr<session>& sessionShard)
+    void client::sendHeartbeat(const std::shared_ptr<shard>& shard)
     {
         json heartbeatPayload;
         heartbeatPayload["op"] = 1;
-        heartbeatPayload["d"] = this->cache_->get("s");
+        heartbeatPayload["d"] = shard->shardStructPtr->seq;
 
+        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
         sessionShard->asyncQueue(heartbeatPayload.dump());
     }
 
-    void client::heartbeatCycle(const std::shared_ptr<session>& sessionShard)
+    void client::heartbeatCycle(const std::shared_ptr<shard>& shard)
     {
-        if(!cache_->exist("heartbeat_interval")) {
-            throw(heliosException(60, "Failed to start heartbeat. No heartbeat_interval found"));
+        if(!shard->shardStructPtr->heartbeatInterval.has_value()) {
+            throw(heliosException(60, "Failed to start heartbeat. No heartbeat interval found"));
         }
 
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<double> dis(0, 1);
 
-        bool foundHeartbeatThread = false;
         double randomNumber = dis(gen);
-        double jitter = randomNumber * std::stod(cache_->get("heartbeat_interval"));
-        for (auto& shard : this->shardClass) {
-            if (shard->shardStructPtr->heartbeatThreadId == std::this_thread::get_id()) {
-                foundHeartbeatThread = true;
-                if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds((int)jitter)) == std::future_status::ready) {
-                    break;
-                }
-                while (true) {
-                    this->sendHeartbeat(sessionShard);
+        double jitter = randomNumber * shard->shardStructPtr->heartbeatInterval.value();
+        if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds((int)jitter)) == std::future_status::ready) {
+            return;
+        }
+        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
 
-                    // If program receivedHeartbeat is false, program never received ack and must restart
-                    if(!shard->shardStructPtr->receivedHeartbeat) {
-                        sessionShard->asyncCloseSession(websocket::close_code::abnormal);
-                        break;
-                    }
+        while (true) {
+            this->sendHeartbeat(shard);
 
-                    shard->shardStructPtr->receivedHeartbeat = false;
-                    if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds(stoi(cache_->get("heartbeat_interval")))) == std::future_status::ready) {
-                        break;
-                    }
-                }
-            }
-
-            if(foundHeartbeatThread) {
+            // If program receivedHeartbeat is false, program never received ack and must restart
+            if(!shard->shardStructPtr->receivedHeartbeat) {
+                sessionShard->asyncCloseSession(websocket::close_code::abnormal);
                 break;
             }
 
-            if(shard == this->shardClass.back()) {
-                std::stringstream targetShardAddress;
-                targetShardAddress << shard->shardStructPtr->shardThreadId;
-
-                const std::string error = "Cannot find thread " + targetShardAddress.str();
-                throw(heliosException(82, error));
+            shard->shardStructPtr->receivedHeartbeat = false;
+            if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds(shard->shardStructPtr->heartbeatInterval.value())) == std::future_status::ready) {
+                break;
             }
         }
     }
@@ -505,8 +439,12 @@ namespace helios {
         this->large_threshold = threshold;
     }
 
-    [[maybe_unused]] void onEvent::ready(const std::function<void(readyEvent)>& userFunction) {
-        this->readyFunction = userFunction;
+    void client::cacheType(int type) {
+        this->cacheTypeValue = type;
+    }
+
+    void client::reconnect() {
+
     }
 
 } // helios

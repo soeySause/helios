@@ -9,7 +9,7 @@
 #include "cache.hpp"
 
 namespace apiRequest {
-    int getGateway(const std::shared_ptr<cache>& cache_);
+    std::string getGateway(const std::shared_ptr<cache>& cache_);
 }
 
 #endif //HELIOS_DISCORDAPIREQUEST_HPP
