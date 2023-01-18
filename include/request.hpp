@@ -21,7 +21,7 @@ private:
     static int httpsResponseCode;
     static std::string httpsResponseReason;
  public:
-    static std::string getRequest(const std::string& host, const std::string& target, const std::shared_ptr<cache>& cache_, const std::string& authorization = "", std::vector<std::string> = {});
+    [[nodiscard]] static std::string getRequest(const std::string& host, const std::string& target, const std::string& authorization = "");
     static int postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization = "");
     static int patchRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization = "");
     static int deleteRequest(const std::string &host, const std::string &target, const std::string &payload, const std::string& authorization = "");

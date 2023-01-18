@@ -29,8 +29,6 @@ target_sources(${PROJECT_NAME}
         include/cache.hpp
         src/request.cpp
         include/request.hpp
-        src/discordApiRequest.cpp
-        include/discordApiRequest.hpp
         src/sharding.cpp
         src/event.cpp
         include/heliosException.hpp

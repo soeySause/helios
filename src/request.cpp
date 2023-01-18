@@ -10,7 +10,7 @@ using json = nlohmann::json;
 int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
-std::string request::getRequest(const std::string& host, const std::string& target, const std::shared_ptr<cache>& cache_, const std::string& authorization, std::vector<std::string> whatToCache)
+std::string request::getRequest(const std::string& host, const std::string& target, const std::string& authorization)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -55,27 +55,6 @@ std::string request::getRequest(const std::string& host, const std::string& targ
 
         if(httpsResponseCode != 200) {
             throw(helios::heliosException(httpsResponseCode, httpsResponseReason));
-        }
-
-
-        const json jsonResponse = json::parse(res.body());
-
-        // For if you need to cache a non json message
-        if(whatToCache[0] == "*") cache_->put(whatToCache[1], jsonResponse.dump());
-
-        // Loop through keys[] and caches the json response
-        for (const auto& key : whatToCache) {
-            if(jsonResponse.contains(key)) {
-                std::string keyValue = jsonResponse.at(key).dump();
-
-                // Check to make sure string is not double-quoted
-                if(keyValue.at(0) == '"') keyValue = keyValue.substr(1, keyValue.length() - 2);
-
-                cache_->put(key, keyValue);
-            } else {
-                std::cerr << "could not find key " + key + " in response " + res.body() << std::endl;
-                throw(helios::heliosException(61, "Failed to cache key " + key));
-            }
         }
 
         return res.body();

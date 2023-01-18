@@ -4,7 +4,9 @@ namespace helios {
     client::client(const std::string& token) {
         this->cache_ = std::make_shared<cache>();
         cache_->put("token", token);
-        apiRequest::getGateway(this->cache_);
+        const json getGateway = json::parse(request::getRequest("discord.com", "/api/gateway/bot", token));
+        cache_->put("shards", getGateway["shards"].dump());
+        cache_->put("url", getGateway["url"]);
     }
 
     [[maybe_unused]] [[noreturn]] void client::run() {
@@ -158,25 +160,14 @@ namespace helios {
 
         shard->shardStructPtr->sessionShard = sessionShard->weak_from_this();
 
+        sessionShard->run(host, "443");
+        ioContext.run();
+
         if(shard->shardStructPtr->reconnect) {
             reconnectingPayload["op"] = 6;
             reconnectingPayload["d"]["token"] = this->cache_->get("token");
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
             reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
-
-            if(shard == this->shardClass.back()) {
-                std::stringstream targetShardAddress;
-                targetShardAddress << shard->shardStructPtr->shardThreadId;
-
-                const std::string error = "Failed to connect to websocket. Cannot find thread " + targetShardAddress.str();
-                throw(heliosException(82, error));
-            }
-        }
-
-        sessionShard->run(host, "443");
-        ioContext.run();
-
-        if(!reconnectingPayload.empty()) {
             sessionShard->asyncQueue(reconnectingPayload.dump());
         }
 
@@ -292,8 +283,18 @@ namespace helios {
             if(executeEvent == "GUILD_CREATE"){
                 guildCreatEvent guildCreateData = shard->shardStructPtr->eventData.getGuildCreateEventData(wsResponseJson["d"]);
                 this->onEvent.guildCreateFunction(guildCreateData);
-
             }
+
+            if(executeEvent == "GUILD_UPDATE"){
+                guildUpdateEvent guildUpdateData = shard->shardStructPtr->eventData.getGuildUpdateEventData(wsResponseJson["d"]);
+                this->onEvent.guildUpdateFunction(guildUpdateData);
+            }
+
+            if(executeEvent == "GUILD_DELETE"){
+                guildDeleteEvent guildDeleteData = shard->shardStructPtr->eventData.getGuildDeleteEventData(wsResponseJson["d"]);
+                this->onEvent.guildDeleteFunction(guildDeleteData);
+            }
+
         }
     }
 

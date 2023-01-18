@@ -13,37 +13,32 @@ namespace helios {
     class user {
     public:
         bool operator==(const user& userToCompare) const;
-        operator bool() const;
+        explicit operator bool() const;
         std::optional<long> id;
         std::optional<std::string> username;
         std::optional<std::string> discriminator;
         std::optional<std::string> avatar;
         std::optional<bool> bot;
         std::optional<bool> system;
-        std::optional<bool> mfa_enabled;
+        std::optional<bool> mfaEnabled;
         std::optional<std::string> banner;
-        std::optional<int> accent_color;
+        std::optional<int> accentColor;
         std::optional<std::string> locale;
         std::optional<bool> verified;
         std::optional<std::string> email;
         std::optional<int> flags;
-        std::optional<int> premium_type;
-        std::optional<int> public_flags;
-    };
-
-    class ban {
-        user user;
-        std::string reason;
+        std::optional<int> premiumType;
+        std::optional<int> publicFlags;
     };
 
     class roleTags {
     public:
-        std::optional<long> bot_id;
-        std::optional<long> integration_id;
-        std::optional<bool> premium_subscriber;
-        std::optional<long> subscription_listing_id;
-        std::optional<bool> available_for_purchase;
-        std::optional<bool> guild_connections;
+        std::optional<long> botId;
+        std::optional<long> integrationId;
+        std::optional<bool> premiumSubscriber;
+        std::optional<long> subscriptionListing_id;
+        std::optional<bool> availableForPurchase;
+        std::optional<bool> guildConnections;
     };
 
     class role {
@@ -53,7 +48,7 @@ namespace helios {
         std::optional<int> color;
         std::optional<bool> hoist;
         std::optional<std::string> icon;
-        std::optional<std::string> unicode_emoji;
+        std::optional<std::string> unicodeEmoji;
         std::optional<int> position;
         std::optional<std::string> permissions;
         std::optional<bool> managed;
@@ -65,7 +60,7 @@ namespace helios {
     public:
         std::optional<long> id;
         std::optional<std::string> name;
-        std::unordered_map<long, role> roles;
+        std::vector<long> roles;
         user user;
         std::optional<bool> require_colons;
         std::optional<bool> managed;
@@ -75,10 +70,10 @@ namespace helios {
 
     class welcomeScreenChannelStructure {
     public:
-        std::optional <long> channel_id;
+        std::optional <long> channelId;
         std::optional <std::string> description;
-        std::optional <long> emoji_id;
-        std::optional <std::string> emoji_name;
+        std::optional <long> emojiId;
+        std::optional <std::string> emojiName;
 
     };
 
@@ -91,56 +86,58 @@ namespace helios {
     class sticker {
     public:
         std::optional<long> id;
-        std::optional<long> pack_id;
+        std::optional<long> packId;
         std::optional<std::string> name;
         std::optional<std::string> description;
         std::optional<std::string> tags;
         std::optional<std::string> asset;
         std::optional<int> type;
-        std::optional<int> format_type;
+        std::optional<int> formatType;
         std::optional<bool> available;
-        std::optional<long> guild_id;
+        std::optional<long> guildId;
         user user;
-        std::optional<int> sort_value;
+        std::optional<int> sortValue;
     };
 
     class guildMember {
+    private:
     public:
         explicit operator bool() const;
         user user;
         std::optional<std::string> nick;
         std::optional<std::string> avatar;
-        std::vector<role> roles;
-        std::optional<std::string> joined_at;
-        std::optional<std::string> premium_since;
+        std::vector<long> roles;
+        std::optional<std::string> joinedAt;
+        std::optional<std::string> premiumSince;
         std::optional<bool> deaf;
         std::optional<bool> mute;
         std::optional<bool> pending;
         std::optional<std::string> permissions;
-        std::optional<std::string> communication_disabled_until;
+        std::optional<std::string> communicationDisabledUntil;
+        std::optional<long> guildId;
     };
 
     class voiceState {
     public:
-        std::optional<long> guild_id;
-        std::optional<long> channel_id;
-        std::optional<long> user_id;
+        std::optional<long> guildId;
+        std::optional<long> channelId;
+        std::optional<long> userId;
         guildMember member;
         std::optional<std::string> session_id;
         std::optional<bool> deaf;
         std::optional<bool> mute;
-        std::optional<bool> self_deaf;
-        std::optional<bool> self_mute;
-        std::optional<bool> self_stream;
-        std::optional<bool> self_video;
+        std::optional<bool> selfDeaf;
+        std::optional<bool> selfMute;
+        std::optional<bool> selfStream;
+        std::optional<bool> selfVideo;
         std::optional<bool> suppress;
-        std::optional<std::string> request_to_speak_timestamp;
+        std::optional<std::string> requestToSpeakTimestamp;
     };
 
     class overwrite {
     public:
         std::optional<long> id;
-        std::optional<int> type;
+        std::optional<std::string> type;
         std::optional<std::string> allow;
         std::optional<std::string>deny;
     };
@@ -148,19 +145,20 @@ namespace helios {
     class threadMetadata {
     public:
         std::optional<bool> archived;
-        std::optional<int> auto_archive_duration;
-        std::optional<std::string> archive_timestamp;
+        std::optional<int> autoArchiveDuration;
+        std::optional<std::string> archiveTimestamp;
         std::optional<bool> locked;
         std::optional<bool> invitable;
-        std::optional<std::string> create_timestamp;
+        std::optional<std::string> createTimestamp;
     };
 
     class threadMember {
-        std::optional<long> id;
-        std::optional<long> user_id;
-        std::optional<std::string> join_timestamp;
+    public:
+        std::optional<long> userId;
+        std::optional<std::string> joinTimestamp;
         std::optional<int> flags;
         guildMember member;
+        std::optional<long> id;
     };
 
     class tag {
@@ -168,27 +166,27 @@ namespace helios {
         std::optional<long> id;
         std::optional<std::string> name;
         std::optional<bool> moderated;
-        std::optional<long> emoji_id;
-        std::optional<std::string> emoji_name;
+        std::optional<long> emojiId;
+        std::optional<std::string> emojiName;
     };
 
     class defaultReaction {
     public:
-        std::optional<long> emoji_id;
-        std::optional<std::string> emoji_name;
+        std::optional<long> emojiId;
+        std::optional<std::string> emojiName;
     };
 
     class channel {
     public:
         std::optional<long> id;
         std::optional<int> type;
-        std::optional<long> guild_id;
+        std::optional<long> guildId;
         std::optional<int> position;
-        std::vector<overwrite> permission_overwrites;
+        std::unordered_map<long, overwrite> permission_overwrites;
         std::optional<std::string> name;
         std::optional<std::string> topic;
         std::optional<bool> nsfw;
-        std::optional<long> last_message_id;
+        std::optional<long> lastMessageId;
         std::optional<int> bitrate;
         std::optional<int> user_limit;
         std::optional<int> rate_limit_per_user;
@@ -229,7 +227,7 @@ namespace helios {
     };
 
     class secrets {
-        
+
     };
 
     class buttons {
@@ -262,7 +260,13 @@ namespace helios {
     };
 
     class stageInstance {
-
+        std::optional<long> id;
+        std::optional<long> guildId;
+        std::optional<long> channelId;
+        std::optional<std::string> topic;
+        std::optional<int> privacyLevel;
+        std::optional<bool> discoveryDisabled;
+        std::optional<long> guildScheduledEventId;
     };
 
     class guildScheduledEvent {
@@ -292,7 +296,17 @@ namespace helios {
     };
 
     class guildPreview {
-
+        std::optional<long> id;
+        std::optional<std::string> name;
+        std::optional<std::string> icon;
+        std::optional<std::string> splash;
+        std::optional<std::string> discoverySplash;
+        std::unordered_map<long, emoji> emojis;
+        std::vector<std::string> features;
+        std::optional<int> approximateMemberCount;
+        std::optional<int> approximatePresenceCount;
+        std::optional<std::string> description;
+        std::unordered_map<long, sticker> stickers;
     };
 
     class account {
@@ -333,60 +347,55 @@ namespace helios {
         std::optional<int> presenceCount;
     };
 
-class guild {
+    class ban {
+        user user;
+        std::string reason;
+    };
+
+    class guild {
 private:
     static guildMember defaultGuildMember;
 public:
     std::optional<long> id;
     std::optional<std::string> name;
     std::optional<std::string> icon;
-    std::optional<std::string> icon_hash;
+    std::optional<std::string> iconHash;
     std::optional<std::string> splash;
-    std::optional<std::string> discovery_splash;
+    std::optional<std::string> discoverySplash;
     std::optional<bool> owner;
-    std::optional<long> owner_id;
+    std::optional<long> ownerId;
     std::optional<std::string> permissions;
-    std::optional<long> afk_channel_id;
-    std::optional<int> afk_timeout;
+    std::optional<long> afkChannelId;
+    std::optional<int> afkTimeout;
     std::optional<bool> widget_enabled;
-    std::optional<long> widget_channel_id;
+    std::optional<long> widgetChannelId;
     std::optional<int> verification_level;
-    std::optional<int> default_message_notifications;
-    std::optional<int> explicit_content_filter;
+    std::optional<int> defaultMessageNotifications;
+    std::optional<int> explicitContentFilter;
     std::unordered_map<long, role> roles;
     std::unordered_map<long, emoji> emojis;
     std::vector<std::string> features;
-    std::optional<int> mfa_level;
-    std::optional<long> application_id;
-    std::optional<long> system_channel_id;
-    std::optional<int> system_channel_flags;
-    std::optional<long> rules_channel_id;
-    std::optional<int> max_presences;
-    std::optional<int> max_members;
-    std::optional<std::string> vanity_url_code;
+    std::optional<int> mfaLevel;
+    std::optional<long> applicationId;
+    std::optional<long> systemChannelId;
+    std::optional<int> systemChannelFlags;
+    std::optional<long> rulesChannelId;
+    std::optional<int> maxPresences;
+    std::optional<int> maxMembers;
+    std::optional<std::string> vanityUrlCode;
     std::optional<std::string> description;
     std::optional<std::string> banner;
-    std::optional<int> premium_tier;
-    std::optional<int> premium_subscription_count;
-    std::optional<std::string> preferred_locale;
-    std::optional<long> public_updates_channel_id;
-    std::optional<int> max_video_channel_users;
-    std::optional<int> approximate_member_count;
-    std::optional<int> approximate_presence_count;
+    std::optional<int> premiumTier;
+    std::optional<int> premiumSubscriptionCount;
+    std::optional<std::string> preferredLocale;
+    std::optional<long> publicUpdatesChannelId;
+    std::optional<int> maxVideoChannelUsers;
+    std::optional<int> approximateMemberCount;
+    std::optional<int> approximatePresenceCount;
     welcomeScreen welcome_screen;
-    std::optional<int> nsfw_level;
+    std::optional<int> nsfwLevel;
     std::unordered_map<long, sticker> stickers;
-    std::optional<bool> premium_progress_bar_enabled;
-    std::optional<std::string> joined_at;
-    std::optional<bool> large;
-    std::optional<int> member_count;
-    std::unordered_map<long, voiceState> voiceStates;
-    std::unordered_map<long, guildMember> members;
-    std::unordered_map<long, channel> channels;
-    std::unordered_map<long, channel> threads;
-    std::unordered_map<long, presenceUpdate> presences;
-    std::unordered_map<long, stageInstance> stage_instances;
-    std::unordered_map<long, guildScheduledEvent> guild_scheduled_events;
+    std::optional<bool> premiumProgressBarEnabled;
 
     guild modifyGuild(guild guildOptions);
     guild delteGuild();
@@ -472,22 +481,22 @@ public:
         std::optional<std::string> topic;
     };
 
-    class unavailableGuilds {
+    class unavailableGuild {
     public:
-        std::optional<std::string> id;
+        std::optional<long> id;
         std::optional<bool> unavailable;
     };
 
     class partialApplication {
     public:
-        std::optional<std::string> id;
+        std::optional<long> id;
         std::optional<int> flags;
     };
 
     class readyEvent {
     public:
         user user;
-        std::vector<unavailableGuilds> guilds;
+        std::vector<unavailableGuild> guilds;
         std::optional<int> shard[2];
         partialApplication application;
     };
@@ -496,8 +505,29 @@ public:
 
     class guildCreatEvent {
     public:
-        std::optional<bool> unavailable;
         guild guild;
+        std::optional<std::string> joinedAt;
+        std::optional<bool> large;
+        std::optional<bool> unavailable;
+        std::optional<int> memberCount;
+        std::unordered_map<long, voiceState> voiceStates;
+        std::unordered_map<long, guildMember> members;
+        std::unordered_map<long, channel> channels;
+        std::unordered_map<long, channel> threads;
+        std::unordered_map<long, presenceUpdate> presences;
+        std::unordered_map<long, stageInstance> stageInstances;
+        std::unordered_map<long, guildScheduledEvent> guildScheduledEvents;
+
+    };
+
+    class guildUpdateEvent {
+    public:
+        guild guild;
+    };
+
+    class guildDeleteEvent {
+    public:
+        unavailableGuild unavailableGuild;
     };
 
     class eventData {
@@ -508,33 +538,50 @@ public:
         static role getRoleData(const json& jsonData);
         static emoji getEmojiData(const json& jsonData);
         static partialApplication getPartialApplicationData(const json& jsonData);
-        static unavailableGuilds getUnavailableGuildsData(const json& jsonData);
+        static unavailableGuild getUnavailableGuildData(const json& jsonData);
         static welcomeScreenChannelStructure getWelcomeScreenChannelStructureData(const json& jsonData);
         static welcomeScreen getWelcomeScreenData(const json& jsonData);
         static sticker getStickerData(const json& jsonData);
         static guild getGuildData(const json& jsonData);
+        static guildMember getGuildMemberData(const json &jsonData, const long& guildId);
+        static voiceState getVoiceStateData(const json& jsonData, const long& guildId);
+        static guildPreview getGuildPreviewData(const json& jsonData);
+        static overwrite getOverwriteData(const json& jsonData);
+        static channel getChannelData(const json& jsonData, const long& guildId = 0);
+        static threadMetadata getThreadMetadataData(const json& jsonData);
+        static threadMember getThreadMemberData(const json& jsonData, const long& guildId);
+        static tag getTagData(const json& jsonData);
+        static defaultReaction getDefaultReactionData(const json& jsonData);
 
 
         [[nodiscard]] readyEvent getReadyEventData(const json& jsonData);
         [[nodiscard]] resumedEvent getResumedEventData(const json& jsonData) const;
         [[nodiscard]] guildCreatEvent getGuildCreateEventData(const json& jsonData);
+        [[nodiscard]] guildUpdateEvent getGuildUpdateEventData(const json& jsonData);
+        [[nodiscard]] guildDeleteEvent getGuildDeleteEventData(const json& jsonData);
     public:
         resumedEvent resumedEventData;
         readyEvent readyEventData;
         guildCreatEvent guildCreateData;
+        guildUpdateEvent guildUpdateData;
+        guildDeleteEvent guildDeleteData;
+
+        channel channelData(const json &jsonData);
     };
 
     class guildOptions {
     private:
         std::unordered_map<long, guild> guilds;
     public:
-        guild create(guild guildOptions);
-        guild get(long guildId);
-        guild get(std::string guildId);
-        guild fetch(long guildId);
-        guild fetch(std::string guildId);
-        guildPreview fetchPreview(long guildId);
-        guildPreview fetchPreview(std::string guildId);
+        guild createGuild(const guild& guildOptions);
+        guild getGuild(const long& guildId, const bool& cacheObject = true) const;
+        guild getGuild(const std::string& guildId, const bool& cacheObject = true) const;
+        guild getGuildFromCache(const long& guildId) const;
+        guild getGuildFromCache(const std::string& guildId) const;
+        bool guildExistsInCache(const long& guildId) const;
+        bool guildExistsInCache(const std::string& guildId) const;
+        guildPreview getGuildPreview(const long& guildId) const;
+        guildPreview getGuildPreview(const std::string& guildId) const;
     };
 
     class channelOptions {
@@ -542,10 +589,12 @@ public:
         std::unordered_map<long, channel> channels;
     public:
         channel create(const channel& channelOptions);
-        channel get(const long& channelId) const;
-        channel get(const std::string& channelId) const;
-        channel fetch(const long& channelId) const;
-        channel fetch(const std::string& channelId) const;
+        channel get(const long& channelId,const bool& cacheObject = true) const;
+        channel get(const std::string& channelId,const bool& cacheObject = true) const;
+        channel getFromCache(const long& channelId) const;
+        channel getFromCache(const std::string& channelId) const;
+        bool existsInCache(const long& guildId) const;
+        bool existsInCache(const std::string& guildId) const;
     };
 
 
@@ -556,8 +605,8 @@ public:
         std::function<void(resumedEvent)> resumedFunction;
 
         std::function<void(guildCreatEvent)> guildCreateFunction;
-        std::function<void(resumedEvent)> guildUpdateFunction;
-        std::function<void(resumedEvent)> guildDeleteFunction;
+        std::function<void(guildUpdateEvent)> guildUpdateFunction;
+        std::function<void(guildDeleteEvent)> guildDeleteFunction;
 
     public:
         [[maybe_unused]] void ready(const std::function<void(readyEvent)>& userFunction);
@@ -583,8 +632,8 @@ public:
         [[maybe_unused]] void threadMembersUpdate(const std::function<void(eventData)>& userFunction);
 
         [[maybe_unused]] void guildCreate(const std::function<void(guildCreatEvent)>& userFunction);
-        [[maybe_unused]] void guildUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void guildUpdate(const std::function<void(guildUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildDelete(const std::function<void(guildDeleteEvent)>& userFunction);
         [[maybe_unused]] void guildBanAdd(const std::function<void(eventData)>& userFunction);
         [[maybe_unused]] void guildBanRemove(const std::function<void(eventData)>& userFunction);
         [[maybe_unused]] void guildEmojiUpdate(const std::function<void(eventData)>& userFunction);

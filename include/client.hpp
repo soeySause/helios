@@ -4,19 +4,21 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <iostream>
 #include <future>
 #include <functional>
 #include <memory>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/ssl.hpp>
+#include <boost/serialization/serialization.hpp>
 #include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 
 #include "cache.hpp"
 #include "ssl/root_certification.hpp"
 #include "session.hpp"
-#include "discordApiRequest.hpp"
 #include "event.hpp"
+#include "request.hpp"
 #include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>

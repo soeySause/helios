@@ -9,58 +9,70 @@ namespace helios {
         if(jsonData.contains("avatar") && !jsonData["avatar"].is_null()) {userData.avatar = jsonData["avatar"]; }
         if(jsonData.contains("bot")) {userData.bot = jsonData["bot"]; }
         if(jsonData.contains("system")) {userData.system = jsonData["system"]; }
-        if(jsonData.contains("mfa_enabled")) {userData.mfa_enabled = jsonData["mfa_enabled"]; }
+        if(jsonData.contains("mfa_enabled")) {userData.mfaEnabled = jsonData["mfa_enabled"]; }
         if(jsonData.contains("banner") && !jsonData["banner"].is_null()) {userData.banner = jsonData["banner"]; }
-        if(jsonData.contains("accent_color") && !jsonData["accent_color"].is_null()) {userData.accent_color = jsonData["accent_color"]; }
+        if(jsonData.contains("accent_color") && !jsonData["accent_color"].is_null()) {userData.accentColor = jsonData["accent_color"]; }
         if(jsonData.contains("locale")) {userData.locale = jsonData["locale"]; }
         if(jsonData.contains("verified")) {userData.verified = jsonData["verified"]; }
         if(jsonData.contains("email") && !jsonData["email"].is_null()) {userData.email = jsonData["email"]; }
         if(jsonData.contains("flags")) {userData.flags = jsonData["flags"]; }
-        if(jsonData.contains("premium_type")) {userData.premium_type = jsonData["premium_type"]; }
+        if(jsonData.contains("premium_type")) {userData.premiumType = jsonData["premium_type"]; }
         if(jsonData.contains("avatar")) {userData.avatar = jsonData["avatar"]; }
-        if(jsonData.contains("public_flags")) {userData.public_flags = jsonData["public_flags"]; }
+        if(jsonData.contains("public_flags")) {userData.publicFlags = jsonData["public_flags"]; }
         return userData;
     }
 
     roleTags eventData::getRoleTagsData(const json &jsonData) {
         roleTags roleTagsData;
-        if(jsonData.contains("bot_id")) {roleTagsData.bot_id = jsonData["bot_id"]; }
-        if(jsonData.contains("integration_id")) {roleTagsData.integration_id = jsonData["integration_id"]; }
-        if(jsonData.contains("premium_subscriber")) {roleTagsData.premium_subscriber = jsonData["premium_subscriber"]; }
-        if(jsonData.contains("subscription_listing_id")) {roleTagsData.subscription_listing_id = jsonData["subscription_listing_id"]; }
-        if(jsonData.contains("available_for_purchase")) {roleTagsData.available_for_purchase = jsonData["available_for_purchase"]; }
-        if(jsonData.contains("guild_connections")) {roleTagsData.guild_connections = jsonData["guild_connections"]; }
+        if(jsonData.contains("bot_id")) {roleTagsData.botId = std::stol(jsonData["bot_id"].get<std::string>()); }
+        if(jsonData.contains("integration_id")) {roleTagsData.integrationId = std::stol(jsonData["integration_id"].get<std::string>()); }
+        if(jsonData.contains("premium_subscriber")) {if (jsonData["premium_subscriber"].is_null()) {
+            roleTagsData.premiumSubscriber = false;
+            } else {roleTagsData.premiumSubscriber = true; }
+        }
+        if(jsonData.contains("subscription_listing_id")) {roleTagsData.subscriptionListing_id = std::stol(jsonData["subscription_listing_id"].get<std::string>()); }
+
+        if(jsonData.contains("guild_connections")) {if (jsonData["guild_connections"].is_null()) {
+                roleTagsData.guildConnections = false;
+            } else {roleTagsData.guildConnections = true; }
+        }
+
+        if(jsonData.contains("available_for_purchase")) {if (jsonData["available_for_purchase"].is_null()) {
+                roleTagsData.availableForPurchase = false;
+            } else {roleTagsData.availableForPurchase = true; }
+        }
         return roleTagsData;
     }
 
     role eventData::getRoleData(const json &jsonData) {
         role roleData;
-        if(jsonData.contains("id")) {roleData.id = jsonData["id"]; }
+        if(jsonData.contains("id")) {roleData.id = std::stol(jsonData["id"].get<std::string>()); }
         if(jsonData.contains("name")) {roleData.name = jsonData["name"]; }
         if(jsonData.contains("color")) {roleData.color = jsonData["color"]; }
         if(jsonData.contains("hoist")) {roleData.hoist = jsonData["hoist"]; }
-        if(jsonData.contains("icon")) {roleData.icon = jsonData["icon"]; }
-        if(jsonData.contains("unicode_emoji")) {roleData.unicode_emoji = jsonData["unicode_emoji"]; }
+        if(jsonData.contains("icon") && !jsonData["icon"].is_null()) {roleData.icon = jsonData["icon"]; }
+        if(jsonData.contains("unicode_emoji") && !jsonData["unicode_emoji"].is_null()) {roleData.unicodeEmoji = jsonData["unicode_emoji"]; }
         if(jsonData.contains("position")) {roleData.position = jsonData["position"]; }
-        if(jsonData.contains("permissions")) {roleData.permissions = jsonData["permissions"]; }
+        if(jsonData.contains("permissions")) {roleData.permissions = jsonData["permissions"].dump(); }
         if(jsonData.contains("managed")) {roleData.managed = jsonData["managed"]; }
         if(jsonData.contains("mentionable")) {roleData.mentionable = jsonData["mentionable"]; }
         if(jsonData.contains("tags")) {roleData.tags = getRoleTagsData(jsonData["tags"]); }
+        return roleData;
     }
 
     emoji eventData::getEmojiData(const json& jsonData) {
         emoji emojiData;
-        emojiData.id = jsonData["id"];
-        emojiData.name = jsonData["name"];
+        if(jsonData.contains("id") && !jsonData["id"].is_null()) {emojiData.id = std::stol(jsonData["id"].get<std::string>()); }
+        if(jsonData.contains("name") && !jsonData["name"].is_null()) {emojiData.name = jsonData["name"]; }
 
         if(jsonData.contains("roles")) {
-            for(const nlohmann::basic_json<>& role : jsonData["roles"]) {
-                if(role["id"].empty()) continue;
-                emojiData.roles[role["id"]] = getRoleData(role);
+            for (const nlohmann::basic_json<> &roleSnowflake: jsonData["roles"]) {
+                emojiData.roles.emplace_back(std::stol(roleSnowflake.get<std::string>()));
             }
         }
 
-        if(jsonData.contains("user")) { emojiData.user = getUserData(jsonData["user"]); }
+
+    if(jsonData.contains("user")) { emojiData.user = getUserData(jsonData["user"]); }
         if(jsonData.contains("require_colons")) {emojiData.require_colons = jsonData["require_colons"]; }
         if(jsonData.contains("managed")) {emojiData.managed = jsonData["managed"]; }
         if(jsonData.contains("animated")) {emojiData.animated = jsonData["animated"]; }
@@ -70,16 +82,16 @@ namespace helios {
 
     welcomeScreenChannelStructure eventData::getWelcomeScreenChannelStructureData(const json& jsonData) {
         welcomeScreenChannelStructure welcomeScreenChannelStructureData;
-        if(jsonData.contains("channel_id")) welcomeScreenChannelStructureData.channel_id = jsonData["channel_id"];
+        if(jsonData.contains("channel_id")) welcomeScreenChannelStructureData.channelId = std::stol(jsonData["channel_id"].get<std::string>());
         if(jsonData.contains("description")) welcomeScreenChannelStructureData.description = jsonData["description"];
-        if(jsonData.contains("emoji_id")) welcomeScreenChannelStructureData.emoji_id = jsonData["emoji_id"];
-        if(jsonData.contains("emoji_name")) {welcomeScreenChannelStructureData.emoji_name = jsonData["emoji_name"]; }
-
+        if(jsonData.contains("emoji_id") && !jsonData["emoji_id"].is_null()) welcomeScreenChannelStructureData.emojiId = std::stol(jsonData["integration_id"].get<std::string>());;
+        if(jsonData.contains("emoji_name") && !jsonData["emoji_name"].is_null()) welcomeScreenChannelStructureData.emojiName = jsonData["emoji_name"];
+        return welcomeScreenChannelStructureData;
     }
 
     welcomeScreen eventData::getWelcomeScreenData(const json& jsonData) {
         welcomeScreen welcomeScreenData;
-        if(jsonData.contains("description")) {welcomeScreenData.description = jsonData["description"]; }
+        if(jsonData.contains("description") && !jsonData["description"].is_null()) {welcomeScreenData.description = jsonData["description"]; }
 
         if(jsonData.contains("welcome_channels")) {
             for(const nlohmann::basic_json<>& channels : jsonData["welcome_channels"]) {
@@ -92,99 +104,255 @@ namespace helios {
 
     sticker eventData::getStickerData(const json &jsonData) {
         sticker stickerData;
-        if(jsonData.contains("id")) { stickerData.id = jsonData["id"]; }
-        if(jsonData.contains("pack_id")) { stickerData.pack_id = jsonData["pack_id"]; }
+        if(jsonData.contains("id")) { stickerData.id = std::stol(jsonData["id"].get<std::string>()); }
+        if(jsonData.contains("pack_id")) { stickerData.packId = std::stol(jsonData["pack_id"].get<std::string>()); }
         if(jsonData.contains("name")) { stickerData.name = jsonData["name"]; }
-        if(jsonData.contains("description")) { stickerData.description = jsonData["description"]; }
+        if(jsonData.contains("description") && !jsonData["description"].is_null()) { stickerData.description = jsonData["description"]; }
         if(jsonData.contains("tags")) { stickerData.tags = jsonData["tags"]; }
         if(jsonData.contains("asset")) { stickerData.asset = jsonData["asset"]; }
         if(jsonData.contains("type")) { stickerData.type = jsonData["type"]; }
-        if(jsonData.contains("format_type")) { stickerData.format_type = jsonData["format_type"]; }
+        if(jsonData.contains("format_type")) { stickerData.formatType = jsonData["format_type"]; }
         if(jsonData.contains("available")) { stickerData.available = jsonData["available"]; }
-        if(jsonData.contains("guild_id")) { stickerData.guild_id = jsonData["guild_id"]; }
+        if(jsonData.contains("guild_id")) { stickerData.guildId = std::stol(jsonData["guild_id"].get<std::string>()); }
         if(jsonData.contains("user")) { stickerData.user = getUserData("user"); }
-        if(jsonData.contains("sort_value")) { stickerData.sort_value = jsonData["sort_value"]; }
+        if(jsonData.contains("sort_value")) { stickerData.sortValue = jsonData["sort_value"]; }
         return stickerData;
+    }
+
+    guildMember eventData::getGuildMemberData(const json &jsonData, const long& guildId) {
+        guildMember guildMemberData;
+        guildMemberData.guildId = guildId;
+        if(jsonData.contains("user")) guildMemberData.user = getUserData(jsonData["user"]);
+        if(jsonData.contains("nick") && !jsonData["nick"].is_null()) guildMemberData.nick = jsonData["nick"];
+        if(jsonData.contains("avatar") && !jsonData["avatar"].is_null()) guildMemberData.avatar = jsonData["avatar"];
+        if(jsonData.contains("roles")) {
+            for (const nlohmann::basic_json<> &roleSnowflake: jsonData["roles"]) {
+                guildMemberData.roles.emplace_back(std::stol(roleSnowflake.get<std::string>()));
+            }
+        }
+
+        if(jsonData.contains("joined_at")) guildMemberData.joinedAt = jsonData["joined_at"];
+        if(jsonData.contains("premium_since") && !jsonData["premium_since"].is_null()) guildMemberData.premiumSince = jsonData["premium_since"];
+        if(jsonData.contains("deaf")) guildMemberData.deaf = jsonData["deaf"];
+        if(jsonData.contains("mute")) guildMemberData.mute = jsonData["mute"];
+        if(jsonData.contains("pending")) guildMemberData.pending = jsonData["pending"];
+        if(jsonData.contains("permissions")) guildMemberData.permissions = jsonData["permissions"];
+        if(jsonData.contains("communication_disabled_until") && !jsonData["communication_disabled_until"].is_null()) guildMemberData.communicationDisabledUntil = jsonData["communication_disabled_until"];
+        return guildMemberData;
+    }
+
+    voiceState eventData::getVoiceStateData(const json &jsonData, const long& guildId) {
+        voiceState voiceStateData;
+        if(jsonData.contains("guild_id")) voiceStateData.guildId = std::stol(jsonData["guild_id"].get<std::string>());
+        if(jsonData.contains("channel_id") && !jsonData["channel_id"].is_null()) voiceStateData.channelId = std::stol(jsonData["channel_id"].get<std::string>());
+        if(jsonData.contains("user_id")) voiceStateData.userId = std::stol(jsonData["user_id"].get<std::string>());
+        if(jsonData.contains("member")) voiceStateData.member = getGuildMemberData(jsonData["member"], guildId);
+        if(jsonData.contains("session_id")) voiceStateData.session_id = jsonData["session_id"];
+        if(jsonData.contains("deaf")) voiceStateData.deaf = jsonData["deaf"];
+        if(jsonData.contains("mute")) voiceStateData.mute = jsonData["mute"];
+        if(jsonData.contains("self_deaf")) voiceStateData.selfDeaf = jsonData["self_deaf"];
+        if(jsonData.contains("self_mute")) voiceStateData.selfMute = jsonData["self_mute"];
+        if(jsonData.contains("self_stream")) voiceStateData.selfStream = jsonData["self_stream"];
+        if(jsonData.contains("self_video")) voiceStateData.selfVideo = jsonData["self_video"];
+        if(jsonData.contains("suppress")) voiceStateData.suppress = jsonData["suppress"];
+        if(jsonData.contains("request_to_speak_timestamp") && !jsonData["request_to_speak_timestamp"].is_null()) voiceStateData.requestToSpeakTimestamp = jsonData["request_to_speak_timestamp"];
+        return voiceStateData;
     }
 
     guild eventData::getGuildData(const json &jsonData) {
         guild guildData;
-        if(jsonData.contains("id")) guildData.id = jsonData["id"];
+        if(jsonData.contains("id")) guildData.id = std::stol(jsonData["id"].get<std::string>());
         if(jsonData.contains("name")) guildData.name = jsonData["name"];
-        if(jsonData.contains("icon")) guildData.icon = jsonData["icon"];
-        if(jsonData.contains("icon_hash")) {guildData.icon_hash = jsonData["icon_hash"]; }
-        if(jsonData.contains("discovery_splash")) guildData.discovery_splash = jsonData["discovery_splash"];
-        if(jsonData.contains("discovery_splash")) {guildData.discovery_splash = jsonData["discovery_splash"]; }
+        if(jsonData.contains("icon") && !jsonData["icon"].is_null()) guildData.icon = jsonData["icon"];
+        if(jsonData.contains("icon_hash") && !jsonData["icon_hash"].is_null()) {guildData.iconHash = jsonData["icon_hash"]; }
+        if(jsonData.contains("discovery_splash") && !jsonData["discovery_splash"].is_null()) guildData.discoverySplash = jsonData["discovery_splash"];
         if(jsonData.contains("owner")) {guildData.owner = jsonData["owner"]; }
-        if(jsonData.contains("owner_id")) {guildData.owner_id = jsonData["owner_id"]; }
+        if(jsonData.contains("owner_id")) {guildData.ownerId = std::stol(jsonData["owner_id"].get<std::string>()); }
         if(jsonData.contains("permissions")) {guildData.permissions = jsonData["permissions"]; }
-        if(jsonData.contains("afk_channel_id")) {guildData.afk_channel_id = jsonData["afk_channel_id"]; }
-        if(jsonData.contains("afk_timeout")) {guildData.afk_timeout = jsonData["afk_timeout"]; }
+        if(jsonData.contains("afk_channel_id") && !jsonData["afk_channel_id"].is_null()) {guildData.afkChannelId = std::stol(jsonData["afk_channel_id"].get<std::string>()); }
+        if(jsonData.contains("afk_timeout")) {guildData.afkTimeout = jsonData["afk_timeout"]; }
         if(jsonData.contains("widget_enabled")) {guildData.widget_enabled = jsonData["widget_enabled"]; }
-        if(jsonData.contains("widget_channel_id")) {guildData.widget_channel_id = jsonData["widget_channel_id"]; }
+        if(jsonData.contains("widget_channel_id") && !jsonData["widget_channel_id"].is_null()) {guildData.widgetChannelId = std::stol(jsonData["widget_channel_id"].get<std::string>()); }
         if(jsonData.contains("verification_level")) {guildData.verification_level = jsonData["verification_level"]; }
-        if(jsonData.contains("default_message_notifications")) {guildData.default_message_notifications = jsonData["default_message_notifications"]; }
-        if(jsonData.contains("explicit_content_filter")) {guildData.explicit_content_filter = jsonData["explicit_content_filter"]; }
+        if(jsonData.contains("default_message_notifications")) {guildData.defaultMessageNotifications = jsonData["default_message_notifications"]; }
+        if(jsonData.contains("explicit_content_filter")) {guildData.explicitContentFilter = jsonData["explicit_content_filter"]; }
 
         if(jsonData.contains("roles")) {
             for(const nlohmann::basic_json<>& role : jsonData["roles"]) {
                 if(role["id"].empty()) continue;
-                guildData.roles[role["id"]] = getRoleData(role);
+                guildData.roles[std::stol(role["id"].get<std::string>())] = getRoleData(role);
             }
         }
 
 
         if(jsonData.contains("emojis")) {
-            for (const nlohmann::basic_json<> &emoji: jsonData["emojis"]) {
+            for (const nlohmann::basic_json<>& emoji: jsonData["emojis"]) {
                 if(emoji["id"].empty()) continue;
-                guildData.roles[emoji["id"]] = getRoleData(emoji);
+                guildData.emojis[std::stol(emoji["id"].get<std::string>())] = getEmojiData(emoji);
             }
         }
 
-        if(jsonData.contains("features")) std::vector<std::string> features = jsonData["features"].array();
-        if(jsonData.contains("mfa_level")) {guildData.mfa_level = jsonData["mfa_level"]; }
-        if(jsonData.contains("application_id")) {guildData.application_id = jsonData["application_id"]; }
-        if(jsonData.contains("system_channel_id")) {guildData.system_channel_id = jsonData["system_channel_id"]; }
-        if(jsonData.contains("system_channel_flags")) {guildData.system_channel_flags = jsonData["system_channel_flags"]; }
-        if(jsonData.contains("rules_channel_id")) {guildData.rules_channel_id = jsonData["rules_channel_id"]; }
-        if(jsonData.contains("max_presences")) {guildData.max_presences = jsonData["max_presences"]; }
-        if(jsonData.contains("max_members")) {guildData.max_members = jsonData["max_members"]; }
-        if(jsonData.contains("vanity_url_code")) {guildData.vanity_url_code = jsonData["vanity_url_code"]; }
-        if(jsonData.contains("description")) {guildData.description = jsonData["description"]; }
-        if(jsonData.contains("banner")) {guildData.banner = jsonData["banner"]; }
-        if(jsonData.contains("premium_tier")) {guildData.premium_tier = jsonData["premium_tier"]; }
-        if(jsonData.contains("premium_subscription_count")) {guildData.premium_subscription_count = jsonData["premium_subscription_count"]; }
-        if(jsonData.contains("preferred_locale")) {guildData.preferred_locale = jsonData["preferred_locale"]; }
-        if(jsonData.contains("public_updates_channel_id")) {guildData.public_updates_channel_id = jsonData["public_updates_channel_id"]; }
-        if(jsonData.contains("max_video_channel_users")) {guildData.max_video_channel_users = jsonData["max_video_channel_users"]; }
-        if(jsonData.contains("approximate_member_count")) {guildData.approximate_member_count = jsonData["approximate_member_count"]; }
-        if(jsonData.contains("approximate_presence_count")) {guildData.approximate_presence_count = jsonData["approximate_presence_count"]; }
+        if(jsonData.contains("features")) {
+            for (const nlohmann::basic_json<>& feature: jsonData["features"]) {
+                guildData.features.emplace_back(feature);
+            }
+        }
+
+        if(jsonData.contains("mfa_level")) {guildData.mfaLevel = jsonData["mfa_level"]; }
+        if(jsonData.contains("application_id") && !jsonData["application_id"].is_null()) {guildData.applicationId = std::stol(jsonData["application_id"].get<std::string>()); }
+        if(jsonData.contains("system_channel_id") && !jsonData["system_channel_id"].is_null()) {guildData.afkChannelId = std::stol(jsonData["system_channel_id"].get<std::string>()); }
+        if(jsonData.contains("system_channel_flags")) {guildData.systemChannelFlags = jsonData["system_channel_flags"]; }
+        if(jsonData.contains("rules_channel_id") && !jsonData["rules_channel_id"].is_null()) {guildData.rulesChannelId = std::stol(jsonData["rules_channel_id"].get<std::string>()); }
+        if(jsonData.contains("max_presences") && !jsonData["max_presences"].is_null()) {guildData.maxPresences = jsonData["max_presences"]; }
+        if(jsonData.contains("max_members")) {guildData.maxMembers = jsonData["max_members"]; }
+        if(jsonData.contains("vanity_url_code") && !jsonData["vanity_url_code"].is_null()) {guildData.vanityUrlCode = jsonData["vanity_url_code"]; }
+        if(jsonData.contains("description") && !jsonData["description"].is_null()) {guildData.description = jsonData["description"]; }
+        if(jsonData.contains("banner") && !jsonData["banner"].is_null()) {guildData.banner = jsonData["banner"]; }
+        if(jsonData.contains("premium_tier")) {guildData.premiumTier = jsonData["premium_tier"]; }
+        if(jsonData.contains("premium_subscription_count")) {guildData.premiumSubscriptionCount = jsonData["premium_subscription_count"]; }
+        if(jsonData.contains("preferred_locale")) {guildData.preferredLocale = jsonData["preferred_locale"]; }
+        if(jsonData.contains("public_updates_channel_id") && !jsonData["public_updates_channel_id"].is_null()) {guildData.publicUpdatesChannelId = std::stol(jsonData["public_updates_channel_id"].get<std::string>()); }
+        if(jsonData.contains("max_video_channel_users")) {guildData.maxVideoChannelUsers = jsonData["max_video_channel_users"]; }
+        if(jsonData.contains("approximate_member_count")) {guildData.approximateMemberCount = jsonData["approximate_member_count"]; }
+        if(jsonData.contains("approximate_presence_count")) {guildData.approximatePresenceCount = jsonData["approximate_presence_count"]; }
         if(jsonData.contains("welcome_screen")) {welcomeScreen welcome_screen = getWelcomeScreenData(jsonData["welcome_screen"]); }
-        if(jsonData.contains("nsfw_level")) {guildData.nsfw_level = jsonData["nsfw_level"]; }
+        if(jsonData.contains("nsfw_level")) {guildData.nsfwLevel = jsonData["nsfw_level"]; }
 
         if(jsonData.contains("stickers")) {
             for (const nlohmann::basic_json<> &sticker: jsonData["stickers"]) {
                 if(sticker["id"].empty()) continue;
-                guildData.roles[sticker["id"]] = getRoleData(sticker);
+                guildData.stickers[std::stol(sticker["id"].get<std::string>())] = getStickerData(sticker);
             }
         }
 
 
-        if(jsonData.contains("premium_progress_bar_enabled")) {guildData.premium_progress_bar_enabled = jsonData["premium_progress_bar_enabled"]; }
+        if(jsonData.contains("premium_progress_bar_enabled")) {guildData.premiumProgressBarEnabled = jsonData["premium_progress_bar_enabled"]; }
         return guildData;
     }
 
+    overwrite eventData::getOverwriteData(const json &jsonData) {
+        overwrite overwriteData;
+        if(jsonData.contains("id")) overwriteData.id = std::stol(jsonData["id"].get<std::string>());
+        if(jsonData.contains("type")) overwriteData.type = jsonData["type"];
+        if(jsonData.contains("allow")) overwriteData.allow = jsonData["allow"].dump();
+        if(jsonData.contains("deny")) overwriteData.deny = jsonData["deny"].dump();
+        return overwriteData;
+    }
+
+    threadMetadata eventData::getThreadMetadataData(const json& jsonData) {
+        threadMetadata threadMetadataData;
+        if(jsonData.contains("archived")) threadMetadataData.archived = jsonData["archived"];
+        if(jsonData.contains("auto_archive_duration")) threadMetadataData.autoArchiveDuration = jsonData["auto_archive_duration"];
+        if(jsonData.contains("archive_timestamp")) threadMetadataData.archiveTimestamp = jsonData["archive_timestamp"];
+        if(jsonData.contains("locked")) threadMetadataData.locked = jsonData["locked"];
+        if(jsonData.contains("invitable")) threadMetadataData.invitable = jsonData["invitable"];
+        if(jsonData.contains("create_timestamp") && !jsonData["create_timestamp"].is_null()) threadMetadataData.createTimestamp = jsonData["create_timestamp"];
+        return threadMetadataData;
+    }
+
+    threadMember eventData::getThreadMemberData(const json& jsonData, const long& guildId) {
+        threadMember threadMemberData;
+        if(jsonData.contains("id")) threadMemberData.id = std::stol(jsonData["id"].get<std::string>());
+        if(jsonData.contains("user_id")) threadMemberData.userId = std::stol(jsonData["user_id"].get<std::string>());
+        if(jsonData.contains("join_timestamp")) threadMemberData.joinTimestamp = jsonData["join_timestamp"];
+        if(jsonData.contains("flags")) threadMemberData.flags = jsonData["flags"];
+        if(jsonData.contains("member")) threadMemberData.member = getGuildMemberData(jsonData["member"], guildId);
+        return threadMemberData;
+    }
+
+    tag eventData::getTagData(const json& jsonData) {
+        tag tagData;
+        if(jsonData.contains("id")) tagData.id = std::stol(jsonData["id"].get<std::string>());
+        if(jsonData.contains("name")) tagData.name = jsonData["name"];
+        if(jsonData.contains("moderated")) tagData.moderated = jsonData["moderated"];
+        if(jsonData.contains("emoji_id") && !jsonData["emoji_id"].is_null()) tagData.emojiId = std::stol(jsonData["id"].get<std::string>());
+        if(jsonData.contains("emoji_name") && !jsonData["emoji_name"].is_null()) tagData.emojiName = jsonData["emoji_name"];
+        return tagData;
+    }
+    defaultReaction eventData::getDefaultReactionData(const json& jsonData) {
+        defaultReaction defaultReactionData;
+        if(jsonData.contains("emoji_id") && !jsonData["emoji_id"].is_null()) defaultReactionData.emojiId = std::stol(jsonData["emoji_id"].get<std::string>());
+        if(jsonData.contains("emoji_name") && !jsonData["emoji_name"].is_null()) defaultReactionData.emojiName = jsonData["emoji_name"];
+        return defaultReactionData;
+    }
+
+
+    channel eventData::getChannelData(const json& jsonData, const long& guildId) {
+        channel channelData;
+        if(jsonData.contains("id")) channelData.id = std::stol(jsonData["id"].get<std::string>());
+        if(jsonData.contains("type")) channelData.type = jsonData["type"];
+        if(jsonData.contains("guild_id")) channelData.guildId = std::stol(jsonData["guild_id"].get<std::string>());
+        if(jsonData.contains("position")) channelData.position = jsonData["position"];
+
+        if(jsonData.contains("permission_overwrites")) {
+            for (const nlohmann::basic_json<>& overwrite: jsonData["permission_overwrites"]) {
+                if(overwrite["id"].empty()) continue;
+                channelData.permission_overwrites[std::stol(overwrite["id"].get<std::string>())] = getOverwriteData(overwrite);
+            }
+        }
+
+        if(jsonData.contains("name") && !jsonData["name"].is_null()) channelData.name = jsonData["name"];
+        if(jsonData.contains("topic") && !jsonData["topic"].is_null()) channelData.topic = jsonData["topic"];
+        if(jsonData.contains("nsfw")) channelData.nsfw = jsonData["nsfw"];
+        if(jsonData.contains("last_message_id") && !jsonData["last_message_id"].is_null()) channelData.lastMessageId = std::stol(jsonData["last_message_id"].get<std::string>());
+        if(jsonData.contains("bitrate")) channelData.bitrate = jsonData["bitrate"];
+        if(jsonData.contains("user_limit")) channelData.user_limit = jsonData["user_limit"];
+        if(jsonData.contains("rate_limit_per_user")) channelData.rate_limit_per_user = jsonData["rate_limit_per_user"];
+        if(jsonData.contains("recipients")) {
+            for (const nlohmann::basic_json<>& recipient: jsonData["recipient"]) {
+                if(recipient["id"].empty()) continue;
+                channelData.recipients[std::stol(recipient["id"].get<std::string>())] = getUserData(recipient);
+            }
+        }
+
+        if(jsonData.contains("icon") && !jsonData["icon"].is_null()) channelData.icon = jsonData["icon"];
+        if(jsonData.contains("owner_id")) channelData.owner_id = std::stol(jsonData["owner_id"].get<std::string>());
+        if(jsonData.contains("application_id")) channelData.application_id = std::stol(jsonData["application_id"].get<std::string>());
+        if(jsonData.contains("parent_id") && !jsonData["parent_id"].is_null()) channelData.parent_id = std::stol(jsonData["parent_id"].get<std::string>());
+        if(jsonData.contains("last_pin_timestamp") && !jsonData["last_pin_timestamp"].is_null()) channelData.last_pin_timestamp = jsonData["last_pin_timestamp"];
+        if(jsonData.contains("rtc_region") && !jsonData["rtc_region"].is_null()) channelData.rtc_region = jsonData["rtc_region"];
+        if(jsonData.contains("video_quality_mode")) channelData.video_quality_mode = jsonData["video_quality_mode"];
+        if(jsonData.contains("message_count")) channelData.message_count = jsonData["message_count"];
+        if(jsonData.contains("member_count")) channelData.member_count = jsonData["member_count"];
+        if(jsonData.contains("thread_metadata")) channelData.thread_metadata = getThreadMetadataData(jsonData["thread_metadata"]);
+        if(jsonData.contains("member")) channelData.member = getThreadMemberData(jsonData["member"], guildId);
+        if(jsonData.contains("default_auto_archive_duration")) channelData.default_auto_archive_duration = jsonData["default_auto_archive_duration"];
+        if(jsonData.contains("permissions")) channelData.permissions = jsonData["permissions"];
+        if(jsonData.contains("flags")) channelData.flags = jsonData["flags"];
+        if(jsonData.contains("total_message_sent")) channelData.total_message_sent = jsonData["total_message_sent"];
+        if(jsonData.contains("available_tags")) {
+            for (const nlohmann::basic_json<>& tag: jsonData["available_tags"]) {
+                if(tag["id"].empty()) continue;
+                channelData.available_tags[std::stol(tag["id"].get<std::string>())] = getTagData(tag);
+            }
+        }
+
+        if(jsonData.contains("applied_tags")) {
+            for (const nlohmann::basic_json<>& tag: jsonData["applied_tags"]) {
+                channelData.applied_tags.emplace_back(tag);
+            }
+        }
+
+        if(jsonData.contains("default_reaction_emoji") && !jsonData["default_reaction_emoji"].is_null()) channelData.default_reaction_emoji = getDefaultReactionData(jsonData["default_reaction_emoji"]);
+        if(jsonData.contains("default_thread_rate_limit_per_use")) channelData.default_thread_rate_limit_per_use = jsonData["default_thread_rate_limit_per_use"];
+        if(jsonData.contains("default_sort_order") && !jsonData["default_sort_order"].is_null()) channelData.default_sort_order = jsonData["default_sort_order"];
+        if(jsonData.contains("default_forum_layout")) channelData.default_forum_layout = jsonData["default_forum_layout"];
+
+        return channelData;
+    }
+
+
     partialApplication eventData::getPartialApplicationData(const json &jsonData) {
         partialApplication partialApplicationData;
-        if(jsonData.contains("id")) {partialApplicationData.id = jsonData["id"]; }
+        if(jsonData.contains("id")) {partialApplicationData.id = std::stol(jsonData["id"].get<std::string>()); }
         if(jsonData.contains("flags")) {partialApplicationData.flags = jsonData["flags"]; }
         return partialApplicationData;
     }
 
-    unavailableGuilds eventData::getUnavailableGuildsData(const json &jsonData) {
-        unavailableGuilds unavailableGuildsData;
-        if(jsonData.contains("id")) {unavailableGuildsData.id = jsonData["id"]; }
-        if(jsonData.contains("unavailable")) {unavailableGuildsData.unavailable = true; }
+    unavailableGuild eventData::getUnavailableGuildData(const json &jsonData) {
+        unavailableGuild unavailableGuildsData;
+        if(jsonData.contains("id")) {unavailableGuildsData.id = std::stol(jsonData["id"].get<std::string>()); }
+        if(jsonData.contains("unavailable")) {unavailableGuildsData.unavailable = jsonData["unavailable"]; }
         return unavailableGuildsData;
     }
 
@@ -192,7 +360,7 @@ namespace helios {
         this->readyEventData.user = getUserData(jsonData["user"]);
 
         for(const nlohmann::basic_json<>& guild : jsonData["guilds"]) {
-            this->readyEventData.guilds.emplace_back(this->getUnavailableGuildsData(guild));
+            this->readyEventData.guilds.emplace_back(this->getUnavailableGuildData(guild));
         }
 
         if(jsonData.contains("shard")) {
@@ -210,9 +378,53 @@ namespace helios {
 
     guildCreatEvent eventData::getGuildCreateEventData(const json& jsonData) {
         this->guildCreateData.guild = getGuildData(jsonData);
+        if(jsonData.contains("joined_at")) {this->guildCreateData.joinedAt = jsonData["joined_at"]; }
+        if(jsonData.contains("large")) {this->guildCreateData.large = jsonData["large"]; }
         if(jsonData.contains("unavailable")) {this->guildCreateData.unavailable = jsonData["unavailable"]; }
+        if(jsonData.contains("member_count")) {this->guildCreateData.memberCount = jsonData["member_count"]; }
+
+        if(jsonData.contains("voice_states")) {
+            for (const nlohmann::basic_json<> &voiceState: jsonData["voice_states"]) {
+                if(voiceState["user_id"].empty()) continue;
+                this->guildCreateData.voiceStates[std::stol(voiceState["user_id"].get<std::string>())] = getVoiceStateData(voiceState, this->guildCreateData.guild.id.value());
+            }
+        }
+
+        if(jsonData.contains("members")) {
+            for (const nlohmann::basic_json<> &member: jsonData["members"]) {
+                if(member["user"]["id"].empty()) continue;
+                this->guildCreateData.members[std::stol(member["user"]["id"].get<std::string>())] = getGuildMemberData(member, this->guildCreateData.guild.id.value());
+            }
+        }
+
+        if(jsonData.contains("channels")) {
+            for (const nlohmann::basic_json<> &channel: jsonData["channels"]) {
+                if(channel["id"].empty()) continue;
+                this->guildCreateData.channels[std::stol(channel["id"].get<std::string>())] = getChannelData(channel, this->guildCreateData.guild.id.value());
+            }
+        }
+
+        if(jsonData.contains("threads")) {
+            for (const nlohmann::basic_json<> &thread: jsonData["threads"]) {
+                if(thread["id"].empty()) continue;
+                this->guildCreateData.threads[std::stol(thread["id"].get<std::string>())] = getChannelData(thread, this->guildCreateData.guild.id.value());
+            }
+        }
+
+
         return this->guildCreateData;
     }
+
+    guildUpdateEvent eventData::getGuildUpdateEventData(const json &jsonData) {
+        this->guildUpdateData.guild = getGuildData(jsonData);
+        return this->guildUpdateData;
+    }
+
+    guildDeleteEvent eventData::getGuildDeleteEventData(const json &jsonData) {
+        this->guildDeleteData.unavailableGuild = getUnavailableGuildData(jsonData);
+        return this->guildDeleteData;
+    }
+
 
     [[maybe_unused]] void onEvent::ready(const std::function<void(readyEvent)>& userFunction) {
         this->readyFunction = userFunction;
@@ -226,15 +438,20 @@ namespace helios {
         this->guildCreateFunction = userFunction;
     }
 
+    [[maybe_unused]] void onEvent::guildUpdate(const std::function<void(guildUpdateEvent)> &userFunction) {
+        this->guildUpdateFunction = userFunction;
+    }
+
+    [[maybe_unused]] void onEvent::guildDelete(const std::function<void(guildDeleteEvent)> &userFunction) {
+        this->guildDeleteFunction = userFunction;
+    }
+
+
     guildMember::operator bool() const {
-        this->joined_at.has_value();
+        return this->guildId.has_value();
     }
 
     bool user::operator==(const user &userToCompare) const {
         return this->id == userToCompare.id;
-    }
-
-    user::operator bool() const {
-        this->id.has_value();
     }
 }
