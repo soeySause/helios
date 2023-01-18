@@ -4,19 +4,21 @@
 #include <string>
 #include <iostream>
 #include <random>
+#include <iostream>
 #include <future>
 #include <functional>
 #include <memory>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/ssl.hpp>
+#include <boost/serialization/serialization.hpp>
 #include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 
 #include "cache.hpp"
 #include "ssl/root_certification.hpp"
 #include "session.hpp"
-#include "discordApiRequest.hpp"
 #include "event.hpp"
+#include "request.hpp"
 #include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
@@ -64,89 +66,6 @@ namespace helios {
         [[maybe_unused]] void setAfk(const bool& afk);
     };
 
-    class onEvent {
-    private:
-        friend class client;
-        std::function<void(eventData)> readyFunction;
-    public:
-        [[maybe_unused]] void ready(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void resumed(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void reconnect(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void applicationCommandPermissionsUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void autoModerationRuleCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationRuleUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationRuleDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationActionExecution(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void channelCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void channelUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void channelDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void channelPinUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void threadCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadListSync(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadMemberUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadMembersUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void guildCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildBanAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildBanRemove(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildEmojiUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildStickersUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildIntegrationsUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void guildMemberAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMemberRemove(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMemberUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMembersChunk(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void guildRoleCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildRoleUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildRoleDelete(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void guildScheduledEventCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUserAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUserRemove(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void integrationCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void integrationUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void integrationDelete(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void inviteCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void inviteDelete(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void messageCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageDeleteBulk(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionRemoveAll(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionRemoveEmoji(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void presenceUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void stageInstanceCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void stageInstanceUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void stageInstanceDelete(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void typingStart(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void userUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void voiceStateUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void voiceServerUpdate(const std::function<void(eventData)>& userFunction);
-
-        [[maybe_unused]] void webhooksUpdate(const std::function<void(eventData)>& userFunction);
-
-    };
-
     struct shardStruct {
         int shardId{};
         int seq = 0;
@@ -155,6 +74,7 @@ namespace helios {
         bool fullReconnect = false;
         bool deleteShard = false;
 
+        eventData eventData;
         std::weak_ptr<session> sessionShard;
         std::unique_ptr<std::thread> shardThread;
         std::thread::id shardThreadId;
@@ -164,6 +84,7 @@ namespace helios {
         std::future<bool> exitHeartbeatFuture = exitHeartbeat.get_future();
         std::unique_ptr<std::thread> heartbeatThread;
         std::thread::id heartbeatThreadId;
+        std::optional<int> heartbeatInterval;
 
         std::string sessionId;
         std::string resumeUrl;
@@ -178,7 +99,7 @@ namespace helios {
     private:
         friend class client;
         friend class shardedClient;
-        std::unique_ptr<shardStruct> shardStructPtr = std::make_unique<shardStruct>();;
+        std::unique_ptr<shardStruct> shardStructPtr = std::make_unique<shardStruct>();
     public:
         [[maybe_unused]] void deleteShard();
         [[maybe_unused]] void reconnect();
@@ -193,16 +114,17 @@ namespace helios {
         std::condition_variable updateCondition;
         std::mutex mutex;
 
-        void startHeartbeatCycle(const std::shared_ptr<session>& sessionShard);
-        void stopHeartbeatCycle();
-        void heartbeatCycle(const std::shared_ptr<session>& sessionShard);
-        void sendHeartbeat(const std::shared_ptr<session>& sessionShard);
-        void parseResponse(const std::shared_ptr<session>& sessionShard, const std::string& response);
-        void wsShard(const std::string& host);
+        void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
+        static void stopHeartbeatCycle(const std::shared_ptr<shard>& shard);
+        void heartbeatCycle(const std::shared_ptr<shard>& shard);
+        static void sendHeartbeat(const std::shared_ptr<shard>& shard);
+        void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
+        void wsShard(const std::string& host, const std::shared_ptr<shard>& shard);
 
         json getIdentifyPayload(const int& shard);
     protected:
         bool enableSharding = false;
+        int cacheTypeValue = 0;
 
         ssl::context sslContext{ssl::context::tlsv12_client};
         std::shared_ptr<cache> cache_;
@@ -210,11 +132,15 @@ namespace helios {
         void createWsShard(const std::shared_ptr<shard>& shard);
         void reconnectShard(const std::shared_ptr<shard>& shard);
         void fullReconnectShard(const std::shared_ptr<shard>& shard);
-        void deleteShard(const std::shared_ptr<shard>& shardR);
+        void deleteShard(const std::shared_ptr<shard>& shard);
 
     public:
         explicit client(const std::string& token);
+        [[maybe_unused]] void cacheType(int type);
+        guildOptions guilds;
+        channelOptions channels;
 
+        [[maybe_unused]] void reconnect();
         [[noreturn]] [[maybe_unused]] void run();
         onEvent onEvent;
 
@@ -222,6 +148,7 @@ namespace helios {
         [[maybe_unused]] void setLargeThreshold(int threshold);
         properties properties;
         presence presence;
+
     };
 } // helios
 

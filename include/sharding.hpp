@@ -20,6 +20,8 @@ namespace helios{
         [[maybe_unused]] std::shared_ptr<shard> createShard(const int& shardId);
         [[maybe_unused]] void removeShard(const std::shared_ptr<shard>& shard);
         [[maybe_unused]] void reconnectAllShards();
+
+        void reconnect() = delete;
     };
 }
 

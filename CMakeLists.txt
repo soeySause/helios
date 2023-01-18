@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
-
 FetchContent_Declare(
         json
         GIT_REPOSITORY https://github.com/nlohmann/json
@@ -15,7 +14,6 @@ FetchContent_Declare(
 
 FetchContent_Populate(json)
 include_directories(${json_SOURCE_DIR}/include/)
-include_directories(${MYSQL_CONNECTOR_CPP_ROOT_DIR}/include/jdbc/)
 
 add_executable(heliosTest test/heliosTest1.cpp)
 target_link_libraries(heliosTest helios)
@@ -31,14 +29,13 @@ target_sources(${PROJECT_NAME}
         include/cache.hpp
         src/request.cpp
         include/request.hpp
-        src/discordApiRequest.cpp
-        include/discordApiRequest.hpp
         src/sharding.cpp
         src/event.cpp
         include/heliosException.hpp
         )
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
+
 target_include_directories(${PROJECT_NAME}
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
