@@ -2,26 +2,17 @@ cmake_minimum_required(VERSION 3.23)
 project(helios)
 include(FetchContent)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenSSL REQUIRED)
-find_package(Boost REQUIRED)
-FetchContent_Declare(
-        json
-        GIT_REPOSITORY https://github.com/nlohmann/json
-        UPDATE_DISCONNECTED 1
-)
-
-FetchContent_Populate(json)
-include_directories(${json_SOURCE_DIR}/include/)
+find_package(nlohmann_json REQUIRED)
+find_package(Boost REQUIRED COMPONENTS serialization)
 
 add_executable(heliosTest test/heliosTest1.cpp)
 target_link_libraries(heliosTest helios)
 
 add_library(${PROJECT_NAME} STATIC)
-
-target_sources(${PROJECT_NAME}
-        PRIVATE
+target_sources(${PROJECT_NAME} PRIVATE
         src/client.cpp
         src/session.cpp
         include/session.hpp
@@ -35,6 +26,9 @@ target_sources(${PROJECT_NAME}
         )
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
+target_link_libraries(${PROJECT_NAME} nlohmann_json)
+target_link_libraries(helios Boost::serialization)
+
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE
