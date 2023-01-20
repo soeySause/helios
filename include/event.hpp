@@ -1,15 +1,26 @@
 #ifndef HELIOS_EVENT_HPP
 #define HELIOS_EVENT_HPP
 
-#include <iostream>
-#include <unordered_map>
-#include <functional>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/optional.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <nlohmann/json.hpp>
 
+#include <iostream>
+#include <fstream>
+#include <unordered_map>
+#include <functional>
+#include "request.hpp"
+
 using json = nlohmann::json;
+using namespace boost::archive;
+
 namespace helios {
     class invite;
     class inviteMetadata;
+    class guildOptions;
     class user {
     public:
         bool operator==(const user& userToCompare) const;
@@ -78,7 +89,18 @@ namespace helios {
     };
 
     class welcomeScreen {
-    public:
+    private:
+        friend class boost::serialization::access;
+
+        template <typename Archive>
+        [[maybe_unused]] void serialize(Archive &ar, const unsigned int version) {
+            ar & description;
+            ar & welcome_channels;
+
+        }
+
+
+        public:
         std::optional <std::string> description;
         std::vector<welcomeScreenChannelStructure> welcome_channels;
     };
@@ -182,36 +204,36 @@ namespace helios {
         std::optional<int> type;
         std::optional<long> guildId;
         std::optional<int> position;
-        std::unordered_map<long, overwrite> permission_overwrites;
+        std::unordered_map<long, overwrite> permissionOverwrites;
         std::optional<std::string> name;
         std::optional<std::string> topic;
         std::optional<bool> nsfw;
         std::optional<long> lastMessageId;
         std::optional<int> bitrate;
-        std::optional<int> user_limit;
-        std::optional<int> rate_limit_per_user;
+        std::optional<int> userLimit;
+        std::optional<int> rateLimitPerUser;
         std::unordered_map<long, user> recipients;
         std::optional<std::string> icon;
-        std::optional<long> owner_id;
-        std::optional<long> application_id;
-        std::optional<long> parent_id;
-        std::optional<std::string> last_pin_timestamp;
-        std::optional<std::string> rtc_region;
-        std::optional<int> video_quality_mode;
-        std::optional<int> message_count;
-        std::optional<int> member_count;
+        std::optional<long> ownerId;
+        std::optional<long> applicationId;
+        std::optional<long> parentId;
+        std::optional<std::string> lastPinTimestamp;
+        std::optional<std::string> rtcRegion;
+        std::optional<int> videoQualityMode;
+        std::optional<int> messageCount;
+        std::optional<int> memberCount;
         threadMetadata thread_metadata;
         threadMember member;
-        std::optional<int> default_auto_archive_duration;
+        std::optional<int> defaultAutoArchiveDuration;
         std::optional<std::string> permissions;
         std::optional<int> flags;
-        std::optional<int> total_message_sent;
-        std::unordered_map<long, tag> available_tags;
-        std::vector<long> applied_tags;
-        defaultReaction default_reaction_emoji;
-        std::optional<int> default_thread_rate_limit_per_use;
-        std::optional<int> default_sort_order;
-        std::optional<int> default_forum_layout;
+        std::optional<int> totalMessageSent;
+        std::unordered_map<long, tag> availableTags;
+        std::vector<long> appliedTags;
+        defaultReaction defaultReactionEmoji;
+        std::optional<int> defaultThreadRateLimitPerUse;
+        std::optional<int> defaultSortOrder;
+        std::optional<int> defaultForumLayout;
     };
 
     class timestamps {
@@ -284,7 +306,12 @@ namespace helios {
     };
 
     class inviteStageInstance {
+    public:
+        friend class boost::serialization::access;
 
+        template <typename Archive>
+        void serialize(Archive &ar, const unsigned int version) { ar & id; }
+        int id;
     };
 
     class voiceRegion {
@@ -354,7 +381,53 @@ namespace helios {
 
     class guild {
 private:
-    static guildMember defaultGuildMember;
+    friend class boost::serialization::access;
+
+    template <typename Archive>
+    [[maybe_unused]] void serialize(Archive &ar, const unsigned int version) {
+        ar & id;
+        ar & name;
+        ar & icon;
+        ar & iconHash;
+        ar & splash;
+        ar & discoverySplash;
+        ar & owner;
+        ar & ownerId;
+        ar & permissions;
+        ar & afkChannelId;
+        ar & afkTimeout;
+        ar & widget_enabled;
+        ar & widgetChannelId;
+        ar & verification_level;
+        ar & defaultMessageNotifications;
+        ar & explicitContentFilter;
+        //std::ar & roles;
+        //std::ar & emojis;
+        ar & features;
+        ar & mfaLevel;
+        ar & applicationId;
+        ar & systemChannelId;
+        ar & systemChannelFlags;
+        ar & rulesChannelId;
+        ar & maxPresences;
+        ar & maxMembers;
+        ar & vanityUrlCode;
+        ar & description;
+        ar & banner;
+        ar & premiumTier;
+        ar & premiumSubscriptionCount;
+        ar & preferredLocale;
+        ar & publicUpdatesChannelId;
+        ar & maxVideoChannelUsers;
+        ar & approximateMemberCount;
+        ar & welcome_screen;
+        ar & nsfwLevel;
+        //std::ar & stickers;
+        ar & premiumProgressBarEnabled;
+
+    }
+
+    const static guildMember defaultGuildMember;
 public:
     std::optional<long> id;
     std::optional<std::string> name;
@@ -457,7 +530,7 @@ public:
     void modifyCurrentUserVoiceState(const voiceState& voiceStateOptions);
     void modifyUserVoiceState(const long& userId,const voiceState& voiceStateOptions);
     void modifyUserVoiceState(const std::string& userId,const voiceState& voiceStateOptions);
-};
+    };
 
     class invite {
         std::optional<std::string> code;
@@ -493,6 +566,21 @@ public:
         std::optional<int> flags;
     };
 
+    class guildCacheObject {
+        guild guild;
+        std::optional<std::string> joinedAt;
+        std::optional<bool> large;
+        std::optional<bool> unavailable;
+        std::optional<int> memberCount;
+        std::unordered_map<long, voiceState> voiceStates;
+        std::unordered_map<long, guildMember> members;
+        std::unordered_map<long, channel> channels;
+        std::unordered_map<long, channel> threads;
+        std::unordered_map<long, presenceUpdate> presences;
+        std::unordered_map<long, stageInstance> stageInstances;
+        std::unordered_map<long, guildScheduledEvent> guildScheduledEvents;
+    };
+
     class readyEvent {
     public:
         user user;
@@ -503,7 +591,22 @@ public:
 
     class resumedEvent {};
 
-    class guildCreatEvent {
+    class channelCreateEvent {
+    public:
+        channel channel;
+    };
+
+    class channelUpdateEvent {
+    public:
+        channel channel;
+    };
+
+    class channelDeleteEvent {
+    public:
+        channel channel;
+    };
+
+    class guildCreateEvent {
     public:
         guild guild;
         std::optional<std::string> joinedAt;
@@ -533,6 +636,8 @@ public:
     class eventData {
     private:
         friend class client;
+        friend class guildOptions;
+        friend class channelOptions;
         static user getUserData(const json& jsonData);
         static roleTags getRoleTagsData(const json& jsonData);
         static role getRoleData(const json& jsonData);
@@ -553,29 +658,44 @@ public:
         static tag getTagData(const json& jsonData);
         static defaultReaction getDefaultReactionData(const json& jsonData);
 
-
         [[nodiscard]] readyEvent getReadyEventData(const json& jsonData);
         [[nodiscard]] resumedEvent getResumedEventData(const json& jsonData) const;
-        [[nodiscard]] guildCreatEvent getGuildCreateEventData(const json& jsonData);
+
+        [[nodiscard]] channelCreateEvent getChannelCreateEventData(const json& jsonData);
+        [[nodiscard]] channelUpdateEvent getChannelUpdateEventData(const json& jsonData);
+        [[nodiscard]] channelDeleteEvent getChannelDeleteEventData(const json& jsonData);
+
+        [[nodiscard]] guildCreateEvent getGuildCreateEventData(const json& jsonData);
         [[nodiscard]] guildUpdateEvent getGuildUpdateEventData(const json& jsonData);
         [[nodiscard]] guildDeleteEvent getGuildDeleteEventData(const json& jsonData);
+
+        static void cacheGuild(const guildCacheObject& guildToBeCached);
+        static void getGuildFromCache(const long& guildIdToGetFromCache, const int& shard);
+        static void removeGuildFromCache(const long& guildIdToBeDeletedFromCache);
+        static void removeAllGuildsFromCache();
     public:
-        resumedEvent resumedEventData;
         readyEvent readyEventData;
-        guildCreatEvent guildCreateData;
+        resumedEvent resumedEventData;
+
+        channelCreateEvent channelCreateData;
+        channelUpdateEvent channelUpdateData;
+        channelDeleteEvent channelDeleteData;
+
+        guildCreateEvent guildCreateData;
         guildUpdateEvent guildUpdateData;
         guildDeleteEvent guildDeleteData;
-
-        channel channelData(const json &jsonData);
     };
+
 
     class guildOptions {
     private:
+        friend class client;
+        std::string token;
         std::unordered_map<long, guild> guilds;
     public:
-        guild createGuild(const guild& guildOptions);
-        guild getGuild(const long& guildId, const bool& cacheObject = true) const;
-        guild getGuild(const std::string& guildId, const bool& cacheObject = true) const;
+        [[maybe_unused]] guild createGuild(const guild& guildOptions, const std::vector<role>& roles = {}, const std::vector<channel>& channels = {});
+        [[maybe_unused]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
+        [[maybe_unused]] guild getGuild(const std::string& guildId, const bool& withCounts = true, const bool& cacheObject = true) const;
         guild getGuildFromCache(const long& guildId) const;
         guild getGuildFromCache(const std::string& guildId) const;
         bool guildExistsInCache(const long& guildId) const;
@@ -604,7 +724,11 @@ public:
         std::function<void(readyEvent)> readyFunction;
         std::function<void(resumedEvent)> resumedFunction;
 
-        std::function<void(guildCreatEvent)> guildCreateFunction;
+        std::function<void(channelCreateEvent)> channelCreateFunction;
+        std::function<void(channelUpdateEvent)> channelUpdateFunction;
+        std::function<void(channelDeleteEvent)> channelDeleteFunction;
+
+        std::function<void(guildCreateEvent)> guildCreateFunction;
         std::function<void(guildUpdateEvent)> guildUpdateFunction;
         std::function<void(guildDeleteEvent)> guildDeleteFunction;
 
@@ -619,9 +743,9 @@ public:
         [[maybe_unused]] void autoModerationRuleDelete(const std::function<void(eventData)>& userFunction);
         [[maybe_unused]] void autoModerationActionExecution(const std::function<void(eventData)>& userFunction);
 
-        [[maybe_unused]] void channelCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void channelUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void channelDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void channelCreate(const std::function<void(channelCreateEvent)>& userFunction);
+        [[maybe_unused]] void channelUpdate(const std::function<void(channelUpdateEvent)>& userFunction);
+        [[maybe_unused]] void channelDelete(const std::function<void(channelDeleteEvent)>& userFunction);
         [[maybe_unused]] void channelPinUpdate(const std::function<void(eventData)>& userFunction);
 
         [[maybe_unused]] void threadCreate(const std::function<void(eventData)>& userFunction);
@@ -631,7 +755,7 @@ public:
         [[maybe_unused]] void threadMemberUpdate(const std::function<void(eventData)>& userFunction);
         [[maybe_unused]] void threadMembersUpdate(const std::function<void(eventData)>& userFunction);
 
-        [[maybe_unused]] void guildCreate(const std::function<void(guildCreatEvent)>& userFunction);
+        [[maybe_unused]] void guildCreate(const std::function<void(guildCreateEvent)>& userFunction);
         [[maybe_unused]] void guildUpdate(const std::function<void(guildUpdateEvent)>& userFunction);
         [[maybe_unused]] void guildDelete(const std::function<void(guildDeleteEvent)>& userFunction);
         [[maybe_unused]] void guildBanAdd(const std::function<void(eventData)>& userFunction);

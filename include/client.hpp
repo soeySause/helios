@@ -124,7 +124,6 @@ namespace helios {
         json getIdentifyPayload(const int& shard);
     protected:
         bool enableSharding = false;
-        int cacheTypeValue = 0;
 
         ssl::context sslContext{ssl::context::tlsv12_client};
         std::shared_ptr<cache> cache_;
@@ -136,7 +135,6 @@ namespace helios {
 
     public:
         explicit client(const std::string& token);
-        [[maybe_unused]] void cacheType(int type);
         guildOptions guilds;
         channelOptions channels;
 

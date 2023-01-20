@@ -4,7 +4,9 @@ namespace helios {
     client::client(const std::string& token) {
         this->cache_ = std::make_shared<cache>();
         cache_->put("token", token);
-        const json getGateway = json::parse(request::getRequest("discord.com", "/api/gateway/bot", token));
+        this->guilds.token = cache_->get("token");
+
+        const json getGateway = json::parse(request::getRequest("discord.com", "/api/gateway/bot", "", token));
         cache_->put("shards", getGateway["shards"].dump());
         cache_->put("url", getGateway["url"]);
     }
@@ -156,7 +158,6 @@ namespace helios {
     void client::wsShard(const std::string &host, const std::shared_ptr<shard>& shard) {
         net::io_context ioContext;
         std::shared_ptr<session> sessionShard = std::make_shared<session>(ioContext, this->sslContext, this->cache_);
-        json reconnectingPayload;
 
         shard->shardStructPtr->sessionShard = sessionShard->weak_from_this();
 
@@ -164,6 +165,7 @@ namespace helios {
         ioContext.run();
 
         if(shard->shardStructPtr->reconnect) {
+            json reconnectingPayload;
             reconnectingPayload["op"] = 6;
             reconnectingPayload["d"]["token"] = this->cache_->get("token");
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
@@ -259,13 +261,17 @@ namespace helios {
                 shard->shardStructPtr->resumeUrl = resumeGatewayUrl.substr(6, resumeGatewayUrl.length() - 6);
                 shard->shardStructPtr->sessionId = wsResponseJson["d"]["session_id"];
 
-                readyEvent readyEventData = shard->shardStructPtr->eventData.getReadyEventData(wsResponseJson["d"]);
-                this->onEvent.readyFunction(readyEventData);
+                if(this->onEvent.readyFunction) {
+                    readyEvent readyEventData = shard->shardStructPtr->eventData.getReadyEventData(wsResponseJson["d"]);
+                    this->onEvent.readyFunction(readyEventData);
+                }
             }
 
             if(executeEvent == "RESUMED") {
-                resumedEvent resumedEventData = shard->shardStructPtr->eventData.getResumedEventData(wsResponseJson["d"]);
-                this->onEvent.resumedFunction(resumedEventData);
+                if(this->onEvent.resumedFunction) {
+                    resumedEvent resumedEventData = shard->shardStructPtr->eventData.getResumedEventData(wsResponseJson["d"]);
+                    this->onEvent.resumedFunction(resumedEventData);
+                }
             }
 
             if(executeEvent == "RECONNECT") {
@@ -280,19 +286,46 @@ namespace helios {
                 return;
             }
 
+            if(executeEvent == "CHANNEL_CREATE"){
+                if(this->onEvent.channelCreateFunction) {
+                    channelCreateEvent channelCreateData = shard->shardStructPtr->eventData.getChannelCreateEventData(wsResponseJson["d"]);
+                    this->onEvent.channelCreateFunction(channelCreateData);
+                }
+            }
+
+            if(executeEvent == "CHANNEL_UPDATE"){
+                if(this->onEvent.channelUpdateFunction) {
+                    channelUpdateEvent channelUpdateData = shard->shardStructPtr->eventData.getChannelUpdateEventData(wsResponseJson["d"]);
+                    this->onEvent.channelUpdateFunction(channelUpdateData);
+                }
+            }
+
+            if(executeEvent == "CHANNEL_DELETE"){
+                if(this->onEvent.channelDeleteFunction) {
+                    channelDeleteEvent channelDeleteData = shard->shardStructPtr->eventData.getChannelDeleteEventData(wsResponseJson["d"]);
+                    this->onEvent.channelDeleteFunction(channelDeleteData);
+                }
+            }
+
             if(executeEvent == "GUILD_CREATE"){
-                guildCreatEvent guildCreateData = shard->shardStructPtr->eventData.getGuildCreateEventData(wsResponseJson["d"]);
-                this->onEvent.guildCreateFunction(guildCreateData);
+                if(this->onEvent.guildCreateFunction) {
+                    guildCreateEvent guildCreateData = shard->shardStructPtr->eventData.getGuildCreateEventData(wsResponseJson["d"]);
+                    this->onEvent.guildCreateFunction(guildCreateData);
+                }
             }
 
             if(executeEvent == "GUILD_UPDATE"){
-                guildUpdateEvent guildUpdateData = shard->shardStructPtr->eventData.getGuildUpdateEventData(wsResponseJson["d"]);
-                this->onEvent.guildUpdateFunction(guildUpdateData);
+                if(this->onEvent.guildUpdateFunction) {
+                    guildUpdateEvent guildUpdateData = shard->shardStructPtr->eventData.getGuildUpdateEventData(wsResponseJson["d"]);
+                    this->onEvent.guildUpdateFunction(guildUpdateData);
+                }
             }
 
             if(executeEvent == "GUILD_DELETE"){
-                guildDeleteEvent guildDeleteData = shard->shardStructPtr->eventData.getGuildDeleteEventData(wsResponseJson["d"]);
-                this->onEvent.guildDeleteFunction(guildDeleteData);
+                if(this->onEvent.guildDeleteFunction) {
+                    guildDeleteEvent guildDeleteData = shard->shardStructPtr->eventData.getGuildDeleteEventData(wsResponseJson["d"]);
+                    this->onEvent.guildDeleteFunction(guildDeleteData);
+                }
             }
 
         }
@@ -359,6 +392,7 @@ namespace helios {
             }
         }
     }
+
 
     json client::getIdentifyPayload(const int& shard) {
         json identifyPayload;
@@ -438,10 +472,6 @@ namespace helios {
 
     [[maybe_unused]] void client::setLargeThreshold(const int threshold) {
         this->large_threshold = threshold;
-    }
-
-    void client::cacheType(int type) {
-        this->cacheTypeValue = type;
     }
 
     void client::reconnect() {

@@ -10,7 +10,7 @@ using json = nlohmann::json;
 int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
-std::string request::getRequest(const std::string& host, const std::string& target, const std::string& authorization)
+std::string request::getRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -50,17 +50,17 @@ std::string request::getRequest(const std::string& host, const std::string& targ
         http::response<http::string_body> res;
         http::read(sock, buffer, res);
 
-        httpsResponseCode = int((unsigned int)res.result_int());
-        httpsResponseReason = res.body();
+        request::httpsResponseCode = int((unsigned int)res.result_int());
+        request::httpsResponseReason = res.body();
 
         if(httpsResponseCode != 200) {
-            throw(helios::heliosException(httpsResponseCode, httpsResponseReason));
+            throw(helios::heliosException(request::httpsResponseCode, "\nEndpoint: \"" + target + "\"\nError message: " + request::httpsResponseReason));
         }
 
         return res.body();
 }
 
-int request::postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)
+std::string request::postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -105,13 +105,18 @@ int request::postRequest(const std::string& host, const std::string& target, con
         http::response<http::string_body> res;
         http::read(sock, buffer, res);
         request::httpsResponseCode = int((unsigned int)res.result_int());
+        request::httpsResponseReason = res.body();
     } catch (const std::exception& error) {
         std::cerr << error.what() << std::endl;
     }
 
+    if(request::httpsResponseCode != 201) {
+        throw(helios::heliosException(request::httpsResponseCode, "\nEndpoint: \"" + target + "\"\nError message: " + request::httpsResponseReason));
+    }
+
     beast::error_code ec;
     sock.shutdown(ec);
-    return request::httpsResponseCode;
+    return httpsResponseReason;
 }
 
 int request::patchRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization)
