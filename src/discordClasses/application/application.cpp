@@ -39,7 +39,7 @@ helios::application::application(const nlohmann::json &jsonData) {
             this->rpcOrigins.emplace_back(tag);
         }
     }
-    
+
     if(jsonData.contains("install_params")) this->installParams = installParams::getInstallParamsData(jsonData["install_params"]);
     if(jsonData.contains("custom_install_url")) this->customInstallUrl = jsonData["custom_install_url"];
     if(jsonData.contains("role_connections_verification_url")) this->roleConnectionsVerificationUrl = jsonData["role_connections_verification_url"];

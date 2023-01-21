@@ -483,10 +483,6 @@ namespace helios {
         return this->guildId.has_value();
     }
 
-    bool user::operator==(const user &userToCompare) const {
-        return this->id == userToCompare.id;
-    }
-
     guild guildOptions::createGuild(const helios::guild &guildOptions, const std::vector<role> &roles, const std::vector<channel> &channels) {
         json createGuildPayload;
         if(guildOptions.name.has_value()) createGuildPayload["name"] = guildOptions.name.value();
