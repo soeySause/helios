@@ -296,15 +296,6 @@ namespace helios {
     };
 
 
-    class application {
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<std::string> icon;
-        std::optional<std::string> description;
-        user bot;
-
-    };
-
     class inviteStageInstance {
     public:
         friend class boost::serialization::access;
