@@ -5,11 +5,9 @@
 #include <nlohmann/json.hpp>
 namespace helios {
     class user {
-    private:
-        friend class teamMember;
-        friend class application;
-        static user getUserData(const nlohmann::json& jsonData);
     public:
+        static user getUserData(const nlohmann::json& jsonData);
+
         bool operator==(const user& userToCompare) const;
         explicit operator bool() const;
         std::optional<long> id;

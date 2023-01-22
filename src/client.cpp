@@ -2,11 +2,13 @@
 
 namespace helios {
     client::client(const std::string& token) {
+        this->applicationRoleConnectionMetadata.token = token;
+        this->guilds.token = token;
+
         this->cache_ = std::make_shared<cache>();
         cache_->put("token", token);
-        this->guilds.token = cache_->get("token");
 
-        const json getGateway = json::parse(request::getRequest("discord.com", "/api/gateway/bot", "", token));
+        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", "", "get", token));
         cache_->put("shards", getGateway["shards"].dump());
         cache_->put("url", getGateway["url"]);
     }

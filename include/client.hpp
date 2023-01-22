@@ -19,6 +19,7 @@
 #include "session.hpp"
 #include "event.hpp"
 #include "request.hpp"
+#include "discordClassses/discordClasses.hpp"
 #include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
@@ -137,6 +138,7 @@ namespace helios {
         explicit client(const std::string& token);
         guildOptions guilds;
         channelOptions channels;
+        applicationRoleConnectionMetadataOptions applicationRoleConnectionMetadata;
 
         [[maybe_unused]] void reconnect();
         [[noreturn]] [[maybe_unused]] void run();
