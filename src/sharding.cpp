@@ -2,7 +2,7 @@
 
 namespace helios {
     [[maybe_unused]] shardedClient::shardedClient(const std::string &token, const int &shards) : client(token) {
-        this->cache_->put("shards", std::to_string(shards));
+        this->shards = shards;
         this->enableSharding = true;
     }
 
@@ -49,7 +49,7 @@ namespace helios {
 
     std::vector<std::shared_ptr<shard>> shardedClient::pool(const int &delay) {
         std::vector<std::shared_ptr<shard>> shardVector;
-        for(int shardId = 0; shardId < std::stoi(this->cache_->get("shards")); shardId++) {
+        for(int shardId = 0; shardId < this->shards; shardId++) {
             shardVector.emplace_back(createShard(shardId));
             std::this_thread::sleep_for(std::chrono::milliseconds(delay));
         }

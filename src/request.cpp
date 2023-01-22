@@ -44,7 +44,7 @@ std::string request::httpsRequest(const std::string& host, const std::string& ta
     } else if(method == "put") {
         req.method(http::verb::put);
     } else {
-        throw(helios::heliosException(405, "Unknown method " + method));
+        throw(helios::heliosException(71, "Unknown method " + method));
     }
 
     req.target(target);

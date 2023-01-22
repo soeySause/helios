@@ -12,7 +12,6 @@
 #include <thread>
 #include <memory>
 
-#include "cache.hpp"
 #include "ssl/root_certification.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -42,7 +41,7 @@ class session : public std::enable_shared_from_this<session>
     bool currentlyQueued_ = true;
 
 public:
-    explicit session(net::io_context& ioc, ssl::context& ctx, const std::shared_ptr<cache>& cache);
+    explicit session(net::io_context& ioc, ssl::context& ctx);
 
     void run(const std::basic_string<char, std::char_traits<char>, std::allocator<char>>& host, char const* port);
     void on_resolve(beast::error_code ec, const tcp::resolver::results_type& results);
