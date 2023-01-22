@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <functional>
 #include "request.hpp"
+#include "discordClassses/discordClasses.hpp"
 
 using json = nlohmann::json;
 using namespace boost::archive;
@@ -609,7 +610,6 @@ public:
         friend class client;
         friend class guildOptions;
         friend class channelOptions;
-        static user getUserData(const json& jsonData);
         static roleTags getRoleTagsData(const json& jsonData);
         static role getRoleData(const json& jsonData);
         static emoji getEmojiData(const json& jsonData);
@@ -665,8 +665,8 @@ public:
         std::unordered_map<long, guild> guilds;
     public:
         [[maybe_unused]] guild createGuild(const guild& guildOptions, const std::vector<role>& roles = {}, const std::vector<channel>& channels = {});
-        [[maybe_unused]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
-        [[maybe_unused]] guild getGuild(const std::string& guildId, const bool& withCounts = true, const bool& cacheObject = true) const;
+        [[maybe_unused]] [[nodiscard]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
+        [[maybe_unused]] [[nodiscard]] guild getGuild(const std::string& guildId, const bool& withCounts = true, const bool& cacheObject = true) const;
         guild getGuildFromCache(const long& guildId) const;
         guild getGuildFromCache(const std::string& guildId) const;
         bool guildExistsInCache(const long& guildId) const;

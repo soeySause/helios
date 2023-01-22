@@ -1,26 +1,6 @@
 #include "event.hpp"
 
 namespace helios {
-    user eventData::getUserData(const json &jsonData) {
-        user userData;
-        if(jsonData.contains("id")) {userData.id = std::stol(jsonData["id"].get<std::string>()); }
-        if(jsonData.contains("username")) {userData.username = jsonData["username"]; }
-        if(jsonData.contains("discriminator")) {userData.discriminator = jsonData["discriminator"]; }
-        if(jsonData.contains("avatar") && !jsonData["avatar"].is_null()) {userData.avatar = jsonData["avatar"]; }
-        if(jsonData.contains("bot")) {userData.bot = jsonData["bot"]; }
-        if(jsonData.contains("system")) {userData.system = jsonData["system"]; }
-        if(jsonData.contains("mfa_enabled")) {userData.mfaEnabled = jsonData["mfa_enabled"]; }
-        if(jsonData.contains("banner") && !jsonData["banner"].is_null()) {userData.banner = jsonData["banner"]; }
-        if(jsonData.contains("accent_color") && !jsonData["accent_color"].is_null()) {userData.accentColor = jsonData["accent_color"]; }
-        if(jsonData.contains("locale")) {userData.locale = jsonData["locale"]; }
-        if(jsonData.contains("verified")) {userData.verified = jsonData["verified"]; }
-        if(jsonData.contains("email") && !jsonData["email"].is_null()) {userData.email = jsonData["email"]; }
-        if(jsonData.contains("flags")) {userData.flags = jsonData["flags"]; }
-        if(jsonData.contains("premium_type")) {userData.premiumType = jsonData["premium_type"]; }
-        if(jsonData.contains("avatar")) {userData.avatar = jsonData["avatar"]; }
-        if(jsonData.contains("public_flags")) {userData.publicFlags = jsonData["public_flags"]; }
-        return userData;
-    }
 
     roleTags eventData::getRoleTagsData(const json &jsonData) {
         roleTags roleTagsData;
@@ -72,7 +52,7 @@ namespace helios {
         }
 
 
-    if(jsonData.contains("user")) { emojiData.user = getUserData(jsonData["user"]); }
+    if(jsonData.contains("user")) { emojiData.user = user::getUserData(jsonData["user"]); }
         if(jsonData.contains("require_colons")) {emojiData.require_colons = jsonData["require_colons"]; }
         if(jsonData.contains("managed")) {emojiData.managed = jsonData["managed"]; }
         if(jsonData.contains("animated")) {emojiData.animated = jsonData["animated"]; }
@@ -114,7 +94,7 @@ namespace helios {
         if(jsonData.contains("format_type")) { stickerData.formatType = jsonData["format_type"]; }
         if(jsonData.contains("available")) { stickerData.available = jsonData["available"]; }
         if(jsonData.contains("guild_id")) { stickerData.guildId = std::stol(jsonData["guild_id"].get<std::string>()); }
-        if(jsonData.contains("user")) { stickerData.user = getUserData("user"); }
+        if(jsonData.contains("user")) { stickerData.user = user::getUserData("user"); }
         if(jsonData.contains("sort_value")) { stickerData.sortValue = jsonData["sort_value"]; }
         return stickerData;
     }
@@ -122,7 +102,7 @@ namespace helios {
     guildMember eventData::getGuildMemberData(const json &jsonData, const long& guildId) {
         guildMember guildMemberData;
         guildMemberData.guildId = guildId;
-        if(jsonData.contains("user")) guildMemberData.user = getUserData(jsonData["user"]);
+        if(jsonData.contains("user")) guildMemberData.user = user::getUserData(jsonData["user"]);
         if(jsonData.contains("nick") && !jsonData["nick"].is_null()) guildMemberData.nick = jsonData["nick"];
         if(jsonData.contains("avatar") && !jsonData["avatar"].is_null()) guildMemberData.avatar = jsonData["avatar"];
         if(jsonData.contains("roles")) {
@@ -301,7 +281,7 @@ namespace helios {
         if(jsonData.contains("recipients")) {
             for (const nlohmann::basic_json<>& recipient: jsonData["recipient"]) {
                 if(recipient["id"].empty()) continue;
-                channelData.recipients[std::stol(recipient["id"].get<std::string>())] = getUserData(recipient);
+                channelData.recipients[std::stol(recipient["id"].get<std::string>())] = user::getUserData(recipient);
             }
         }
 
@@ -357,7 +337,7 @@ namespace helios {
     }
 
     readyEvent eventData::getReadyEventData(const json &jsonData) {
-        this->readyEventData.user = getUserData(jsonData["user"]);
+        this->readyEventData.user = user::getUserData(jsonData["user"]);
 
         for(const nlohmann::basic_json<>& guild : jsonData["guilds"]) {
             this->readyEventData.guilds.emplace_back(this->getUnavailableGuildData(guild));
@@ -543,14 +523,14 @@ namespace helios {
         if(guildOptions.systemChannelId.has_value()) createGuildPayload["system_channel_id"] = guildOptions.systemChannelId.value();
         if(guildOptions.systemChannelFlags.has_value()) createGuildPayload["system_channel_flags"] = guildOptions.systemChannelFlags.value();
 
-        const std::string newGuild = request::postRequest("discord.com", "/api/guilds", createGuildPayload.dump(),this->token);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), "post",this->token);
         return eventData::getGuildData(json::parse(newGuild));
     }
 
     guild guildOptions::getGuild(const long& guildId, const bool& withCounts, const bool& cacheObject) const {
         json payload;
         payload["with_counts"] = withCounts;
-        const std::string newGuild = request::getRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), this->token);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), "get", this->token);
         if(cacheObject) {
             //TODO cache this shit
         }

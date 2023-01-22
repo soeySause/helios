@@ -21,10 +21,7 @@ private:
     static int httpsResponseCode;
     static std::string httpsResponseReason;
  public:
-    [[nodiscard]] static std::string getRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization = "");
-    [[nodiscard]] static std::string postRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization = "");
-    static int patchRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& authorization = "");
-    static int deleteRequest(const std::string &host, const std::string &target, const std::string &payload, const std::string& authorization = "");
+    [[nodiscard]] static std::string httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method,const std::string& authorization = "");
 };
 
 #endif //HELIOS_REQUEST_HPP
