@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "heliosException.hpp"
-#include "cache.hpp"
 #include "ssl/root_certification.hpp"
 
  class request

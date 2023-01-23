@@ -10,7 +10,7 @@ void fail(beast::error_code ec, char const* what)
 }
 
 // Resolver and socket require an io_context
-session::session(net::io_context& ioc, ssl::context& ctx, const std::shared_ptr<cache>& cache)
+session::session(net::io_context& ioc, ssl::context& ctx)
         : resolver_(net::make_strand(ioc))
         , timer_(ioc)
         , ws_(net::make_strand(ioc), ctx){};

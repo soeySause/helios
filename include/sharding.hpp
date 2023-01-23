@@ -1,7 +1,6 @@
 #ifndef HELIOS_SHARDING_HPP
 #define HELIOS_SHARDING_HPP
 
-#include "cache.hpp"
 #include "client.hpp"
 #include "heliosException.hpp"
 

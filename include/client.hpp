@@ -14,7 +14,6 @@
 #include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 
-#include "cache.hpp"
 #include "ssl/root_certification.hpp"
 #include "session.hpp"
 #include "event.hpp"
@@ -108,6 +107,12 @@ namespace helios {
 
     class client {
     private:
+        std::string token;
+        std::string host;
+
+        int maxConcurrency;
+        std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
+
         bool compress = false;
         int large_threshold = 50;
         int intents = 7;
@@ -120,14 +125,14 @@ namespace helios {
         void heartbeatCycle(const std::shared_ptr<shard>& shard);
         static void sendHeartbeat(const std::shared_ptr<shard>& shard);
         void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
-        void wsShard(const std::string& host, const std::shared_ptr<shard>& shard);
+        void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
 
         json getIdentifyPayload(const int& shard);
     protected:
+        int shards;
         bool enableSharding = false;
 
         ssl::context sslContext{ssl::context::tlsv12_client};
-        std::shared_ptr<cache> cache_;
         std::vector<std::shared_ptr<shard>> shardClass;
         void createWsShard(const std::shared_ptr<shard>& shard);
         void reconnectShard(const std::shared_ptr<shard>& shard);
@@ -139,6 +144,7 @@ namespace helios {
         guildOptions guilds;
         channelOptions channels;
         applicationRoleConnectionMetadataOptions applicationRoleConnectionMetadata;
+        auditLogOptions auditLog;
 
         [[maybe_unused]] void reconnect();
         [[noreturn]] [[maybe_unused]] void run();

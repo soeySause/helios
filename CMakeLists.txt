@@ -11,13 +11,11 @@ find_package(Boost REQUIRED COMPONENTS serialization)
 add_executable(heliosTest test/heliosTest1.cpp)
 target_link_libraries(heliosTest helios)
 
-add_library(${PROJECT_NAME} STATIC src/discordClasses/application/application.cpp include/discordClassses/application.hpp src/discordClasses/team/team.cpp include/discordClassses/team.hpp src/discordClasses/user/user.cpp include/discordClassses/user.hpp src/discordClasses/applicationRoleConnectionMetadata/applicationRoleConnectionMetadata.cpp include/discordClassses/applicationRoleConnectionMetadata.hpp include/discordClassses/discordClasses.hpp)
+add_library(${PROJECT_NAME} STATIC src/discordClasses/application/application.cpp include/discordClassses/application.hpp src/discordClasses/team/team.cpp include/discordClassses/team.hpp src/discordClasses/user/user.cpp include/discordClassses/user.hpp src/discordClasses/applicationRoleConnectionMetadata/applicationRoleConnectionMetadata.cpp include/discordClassses/applicationRoleConnectionMetadata.hpp include/discordClassses/discordClasses.hpp src/discordClasses/auditLog/auditLog.cpp include/discordClassses/auditLog.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
         src/client.cpp
         src/session.cpp
         include/session.hpp
-        src/cache.cpp
-        include/cache.hpp
         src/request.cpp
         include/request.hpp
         src/sharding.cpp

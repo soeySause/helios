@@ -2,25 +2,19 @@
 
 namespace helios {
     client::client(const std::string& token) {
+        this->token = token;
         this->applicationRoleConnectionMetadata.token = token;
+        this->auditLog.token = token;
         this->guilds.token = token;
 
-        this->cache_ = std::make_shared<cache>();
-        cache_->put("token", token);
-
         const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", "", "get", token));
-        cache_->put("shards", getGateway["shards"].dump());
-        cache_->put("url", getGateway["url"]);
+        this->shards = getGateway["shards"];
+        this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
+        this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
     }
 
     [[maybe_unused]] [[noreturn]] void client::run() {
-        if(!cache_->exist("url")) {
-            throw(heliosException(60, "Failed to connect to websocket. No url found"));
-        }
-
         load_root_certificates(this->sslContext);
-        const std::string host = this->cache_->get("url").substr(6, cache_->get("url").length() - 6);
-        this->cache_->put("host", host);
 
         if(!enableSharding) {
             std::shared_ptr<shard> newShard = std::make_shared<shard>();
@@ -29,19 +23,19 @@ namespace helios {
             this->shardClass.emplace_back(newShard);
         }
 
-        // set running as true so new shards know to call
-        // createWsShard() themselves after this point
+        if(this->shardClass.empty()) {
+            throw(helios::heliosException(10, "No shards defined"));
+        }
+
+        std::unique_lock<std::mutex> lock(mutex);
         for(auto& shard : this->shardClass) {
             shard->shardStructPtr->running = true;
-        }
-
-        // create and start threads
-        for(auto& shard : this->shardClass) {
             this->createWsShard(shard);
         }
+        mutex.unlock();
 
         while(true) {
-            std::unique_lock<std::mutex> lock(mutex);
+            mutex.lock();
             updateCondition.wait(lock, [&] {
                 for (auto& shard: this->shardClass) {
                     if (shard->shardStructPtr->exitFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
@@ -140,36 +134,42 @@ namespace helios {
         }
     }
 
-
-
     void client::createWsShard(const std::shared_ptr<shard>& shard) {
-        std::string host;
-
+        std::unique_ptr<std::thread> newWsShard;
         if(shard->shardStructPtr->reconnect) {
-            host = shard->shardStructPtr->resumeUrl;
-        } else {
-            host = cache_->get("host");
+            newWsShard = std::make_unique<std::thread>(&client::wsShard, this, shard->shardStructPtr->resumeUrl, shard);
+            shard->shardStructPtr->shardThread.swap(newWsShard);
+            shard->shardStructPtr->shardThreadId = shard->shardStructPtr->shardThread->get_id();
+            return;
         }
 
-        std::unique_ptr<std::thread> newWsShard;
-        newWsShard = std::make_unique<std::thread>(&client::wsShard, this, host, shard);
+        if(this->shardCreationTime.size() >= this->maxConcurrency) {
+            const auto timeSinceLastShard = std::chrono::system_clock::now() - shardCreationTime.back();
+            if (timeSinceLastShard < std::chrono::seconds(5)) {
+                std::this_thread::sleep_for(std::chrono::seconds(5) - timeSinceLastShard);
+            }
+            this->shardCreationTime.pop_back();
+        }
+
+        this->shardCreationTime.insert(this->shardCreationTime.begin(), std::chrono::system_clock::now());
+        newWsShard = std::make_unique<std::thread>(&client::wsShard, this, this->host, shard);
         shard->shardStructPtr->shardThread.swap(newWsShard);
         shard->shardStructPtr->shardThreadId = shard->shardStructPtr->shardThread->get_id();
     }
 
-    void client::wsShard(const std::string &host, const std::shared_ptr<shard>& shard) {
+    void client::wsShard(const std::string &connectedHost, const std::shared_ptr<shard>& shard) {
         net::io_context ioContext;
-        std::shared_ptr<session> sessionShard = std::make_shared<session>(ioContext, this->sslContext, this->cache_);
+        std::shared_ptr<session> sessionShard = std::make_shared<session>(ioContext, this->sslContext);
 
         shard->shardStructPtr->sessionShard = sessionShard->weak_from_this();
 
-        sessionShard->run(host, "443");
+        sessionShard->run(connectedHost, "443");
         ioContext.run();
 
         if(shard->shardStructPtr->reconnect) {
             json reconnectingPayload;
             reconnectingPayload["op"] = 6;
-            reconnectingPayload["d"]["token"] = this->cache_->get("token");
+            reconnectingPayload["d"]["token"] = this->token;
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
             reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
             sessionShard->asyncQueue(reconnectingPayload.dump());
@@ -399,7 +399,7 @@ namespace helios {
     json client::getIdentifyPayload(const int& shard) {
         json identifyPayload;
         identifyPayload["op"] = 2;
-        identifyPayload["d"]["token"] = this->cache_->get("token");
+        identifyPayload["d"]["token"] = this->token;
 
         identifyPayload["d"]["properties"]["os"] = this->properties.os;
         identifyPayload["d"]["properties"]["browser"] = this->properties.browser;
@@ -410,7 +410,7 @@ namespace helios {
 
         if(enableSharding) {
             json jsonShards = json::array();
-            jsonShards = {shard, std::stoi(this->cache_->get("shards"))};
+            jsonShards = {shard, this->shards};
             identifyPayload["d"]["shard"] = jsonShards;
         }
 

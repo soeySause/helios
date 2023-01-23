@@ -16,7 +16,7 @@ helios::user helios::user::getUserData(const nlohmann::json& jsonData) {
     if(jsonData.contains("email") && !jsonData["email"].is_null()) {userData.email = jsonData["email"]; }
     if(jsonData.contains("flags")) {userData.flags = jsonData["flags"]; }
     if(jsonData.contains("premium_type")) {userData.premiumType = jsonData["premium_type"]; }
-    if(jsonData.contains("avatar")) {userData.avatar = jsonData["avatar"]; }
+    if(jsonData.contains("avatar") && !jsonData["avatar"].is_null()) {userData.avatar = jsonData["avatar"]; }
     if(jsonData.contains("public_flags")) {userData.publicFlags = jsonData["public_flags"]; }
     return userData;
 }
