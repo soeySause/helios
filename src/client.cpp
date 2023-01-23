@@ -4,13 +4,13 @@ namespace helios {
     client::client(const std::string& token) {
         this->token = token;
         this->applicationRoleConnectionMetadata.token = token;
+        this->auditLog.token = token;
         this->guilds.token = token;
 
         const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", "", "get", token));
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
-        std::cout << maxConcurrency << std::endl;
     }
 
     [[maybe_unused]] [[noreturn]] void client::run() {
@@ -21,6 +21,10 @@ namespace helios {
             newShard->shardStructPtr->shardId = 0;
 
             this->shardClass.emplace_back(newShard);
+        }
+
+        if(this->shardClass.empty()) {
+            throw(helios::heliosException(10, "No shards defined"));
         }
 
         std::unique_lock<std::mutex> lock(mutex);

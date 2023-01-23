@@ -144,6 +144,7 @@ namespace helios {
         guildOptions guilds;
         channelOptions channels;
         applicationRoleConnectionMetadataOptions applicationRoleConnectionMetadata;
+        auditLogOptions auditLog;
 
         [[maybe_unused]] void reconnect();
         [[noreturn]] [[maybe_unused]] void run();
