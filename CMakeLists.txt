@@ -11,7 +11,7 @@ find_package(Boost REQUIRED COMPONENTS serialization)
 add_executable(heliosTest test/heliosTest1.cpp)
 target_link_libraries(heliosTest helios)
 
-add_library(${PROJECT_NAME} STATIC src/discordClasses/application/application.cpp include/discordClassses/application.hpp src/discordClasses/team/team.cpp include/discordClassses/team.hpp src/discordClasses/user/user.cpp include/discordClassses/user.hpp src/discordClasses/applicationRoleConnectionMetadata/applicationRoleConnectionMetadata.cpp include/discordClassses/applicationRoleConnectionMetadata.hpp include/discordClassses/discordClasses.hpp src/discordClasses/auditLog/auditLog.cpp include/discordClassses/auditLog.hpp)
+add_library(${PROJECT_NAME} STATIC src/discordClasses/application/application.cpp include/discordClassses/application.hpp src/discordClasses/team/team.cpp include/discordClassses/team.hpp src/discordClasses/user/user.cpp include/discordClassses/user.hpp src/discordClasses/applicationRoleConnectionMetadata/applicationRoleConnectionMetadata.cpp include/discordClassses/applicationRoleConnectionMetadata.hpp include/discordClassses/discordClasses.hpp src/discordClasses/auditLog/auditLog.cpp include/discordClassses/auditLog.hpp src/discordClasses/channel/channel.cpp include/discordClassses/channel/channel.hpp src/discordClasses/channel/message.cpp include/discordClassses/channel/message.hpp src/discordClasses/channel/embed.cpp include/discordClassses/channel/embed.hpp src/discordClasses/channel/attachment.cpp include/discordClassses/channel/attachment.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
         src/client.cpp
         src/session.cpp

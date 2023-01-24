@@ -145,40 +145,6 @@ namespace helios {
         std::optional<std::string>deny;
     };
 
-    class threadMetadata {
-    public:
-        std::optional<bool> archived;
-        std::optional<int> autoArchiveDuration;
-        std::optional<std::string> archiveTimestamp;
-        std::optional<bool> locked;
-        std::optional<bool> invitable;
-        std::optional<std::string> createTimestamp;
-    };
-
-    class threadMember {
-    public:
-        std::optional<long> userId;
-        std::optional<std::string> joinTimestamp;
-        std::optional<int> flags;
-        guildMember member;
-        std::optional<long> id;
-    };
-
-    class tag {
-    public:
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<bool> moderated;
-        std::optional<long> emojiId;
-        std::optional<std::string> emojiName;
-    };
-
-    class defaultReaction {
-    public:
-        std::optional<long> emojiId;
-        std::optional<std::string> emojiName;
-    };
-
     class channel {
     public:
         std::optional<long> id;
