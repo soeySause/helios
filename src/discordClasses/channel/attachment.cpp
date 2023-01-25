@@ -2,7 +2,7 @@
 
 helios::attachment helios::attachment::getAttachmentData(const nlohmann::json &jsonData) {
     helios::attachment attachmentData;
-    attachmentData.id = jsonData["id"];
+    attachmentData.id = std::stol(jsonData["id"].get<std::string>());
     attachmentData.filename = jsonData["filename"];
     if(jsonData.contains("description")) attachmentData.description = jsonData["description"];
     if(jsonData.contains("content_type")) attachmentData.contentType = jsonData["content_type"];

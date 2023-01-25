@@ -4,11 +4,11 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include "guildMember.hpp"
+#include "../guild/guildMember.hpp"
 #include "discordClassses/user.hpp"
 
 namespace helios {
-
+    class message;
     class channelMention {
         std::optional<long> id;
         std::optional<long> guildId;
@@ -92,12 +92,14 @@ namespace helios {
         std::optional<std::string> permissions;
         std::optional<int> flags;
         std::optional<int> totalMessageSent;
-        std::unordered_map<long, tag> availableTags;
+        std::unordered_map<long, forumTag> availableTags;
         std::vector<long> appliedTags;
         defaultReaction defaultReactionEmoji;
         std::optional<int> defaultThreadRateLimitPerUse;
         std::optional<int> defaultSortOrder;
         std::optional<int> defaultForumLayout;
+
+
     };
 } // helios
 

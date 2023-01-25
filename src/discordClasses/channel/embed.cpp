@@ -127,4 +127,13 @@ namespace helios {
         return embedData;
     }
 
+    embed::embed(const std::string &title, const std::string &description, const std::string &url,
+                 const std::string &timestamp, const int &color) {
+        this->title = title;
+        this->description = description;
+        this->url = url;
+        this->timestamp = timestamp;
+        this->color = color;
+    }
+
 } // helios

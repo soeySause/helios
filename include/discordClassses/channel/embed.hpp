@@ -94,6 +94,7 @@ namespace helios {
 
     class embed {
     private:
+        friend class message;
         static embed getEmbedData(const nlohmann::json& jsonData);
     public:
         explicit embed(const std::string& title = "", const std::string& description = "", const std::string& url= "", const std::string& timestamp = "", const int& color = 0);

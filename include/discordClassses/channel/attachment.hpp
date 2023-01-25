@@ -5,8 +5,9 @@
 #include <nlohmann/json.hpp>
 namespace helios {
     class attachment {
-    public:
+        friend class message;
         static attachment getAttachmentData(const nlohmann::json& jsonData);
+    public:
         std::optional<long> id;
         std::optional<std::string> filename;
         std::optional<std::string> description;
