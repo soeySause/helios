@@ -2,11 +2,13 @@
 #define HELIOS_ATTACHMENT_HPP
 #include <optional>
 #include <string>
-
+#include <nlohmann/json.hpp>
 namespace helios {
     class attachment {
+    public:
+        static attachment getAttachmentData(const nlohmann::json& jsonData);
         std::optional<long> id;
-        std::optional<std::string> fileName;
+        std::optional<std::string> filename;
         std::optional<std::string> description;
         std::optional<std::string> contentType;
         std::optional<int> size;
