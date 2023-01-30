@@ -19,491 +19,6 @@ using json = nlohmann::json;
 using namespace boost::archive;
 
 namespace helios {
-    class invite;
-    class inviteMetadata;
-    class guildOptions;
-
-    class roleTags {
-    public:
-        std::optional<long> botId;
-        std::optional<long> integrationId;
-        std::optional<bool> premiumSubscriber;
-        std::optional<long> subscriptionListing_id;
-        std::optional<bool> availableForPurchase;
-        std::optional<bool> guildConnections;
-    };
-
-    class role {
-    public:
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<int> color;
-        std::optional<bool> hoist;
-        std::optional<std::string> icon;
-        std::optional<std::string> unicodeEmoji;
-        std::optional<int> position;
-        std::optional<std::string> permissions;
-        std::optional<bool> managed;
-        std::optional<bool> mentionable;
-        roleTags tags;
-    };
-
-    class emoji {
-    public:
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::vector<long> roles;
-        user user;
-        std::optional<bool> require_colons;
-        std::optional<bool> managed;
-        std::optional<bool> animated;
-        std::optional<bool> available;
-    };
-
-    class welcomeScreenChannelStructure {
-    public:
-        std::optional <long> channelId;
-        std::optional <std::string> description;
-        std::optional <long> emojiId;
-        std::optional <std::string> emojiName;
-
-    };
-
-    class welcomeScreen {
-    private:
-        friend class boost::serialization::access;
-
-        template <typename Archive>
-        [[maybe_unused]] void serialize(Archive &ar, const unsigned int version) {
-            ar & description;
-            ar & welcome_channels;
-
-        }
-
-
-        public:
-        std::optional <std::string> description;
-        std::vector<welcomeScreenChannelStructure> welcome_channels;
-    };
-
-    class sticker {
-    public:
-        std::optional<long> id;
-        std::optional<long> packId;
-        std::optional<std::string> name;
-        std::optional<std::string> description;
-        std::optional<std::string> tags;
-        std::optional<std::string> asset;
-        std::optional<int> type;
-        std::optional<int> formatType;
-        std::optional<bool> available;
-        std::optional<long> guildId;
-        user user;
-        std::optional<int> sortValue;
-    };
-
-    class guildMember {
-    private:
-    public:
-        explicit operator bool() const;
-        user user;
-        std::optional<std::string> nick;
-        std::optional<std::string> avatar;
-        std::vector<long> roles;
-        std::optional<std::string> joinedAt;
-        std::optional<std::string> premiumSince;
-        std::optional<bool> deaf;
-        std::optional<bool> mute;
-        std::optional<bool> pending;
-        std::optional<std::string> permissions;
-        std::optional<std::string> communicationDisabledUntil;
-        std::optional<long> guildId;
-    };
-
-    class voiceState {
-    public:
-        std::optional<long> guildId;
-        std::optional<long> channelId;
-        std::optional<long> userId;
-        guildMember member;
-        std::optional<std::string> session_id;
-        std::optional<bool> deaf;
-        std::optional<bool> mute;
-        std::optional<bool> selfDeaf;
-        std::optional<bool> selfMute;
-        std::optional<bool> selfStream;
-        std::optional<bool> selfVideo;
-        std::optional<bool> suppress;
-        std::optional<std::string> requestToSpeakTimestamp;
-    };
-
-    class overwrite {
-    public:
-        std::optional<long> id;
-        std::optional<std::string> type;
-        std::optional<std::string> allow;
-        std::optional<std::string>deny;
-    };
-
-    class channel {
-    public:
-        std::optional<long> id;
-        std::optional<int> type;
-        std::optional<long> guildId;
-        std::optional<int> position;
-        std::unordered_map<long, overwrite> permissionOverwrites;
-        std::optional<std::string> name;
-        std::optional<std::string> topic;
-        std::optional<bool> nsfw;
-        std::optional<long> lastMessageId;
-        std::optional<int> bitrate;
-        std::optional<int> userLimit;
-        std::optional<int> rateLimitPerUser;
-        std::unordered_map<long, user> recipients;
-        std::optional<std::string> icon;
-        std::optional<long> ownerId;
-        std::optional<long> applicationId;
-        std::optional<long> parentId;
-        std::optional<std::string> lastPinTimestamp;
-        std::optional<std::string> rtcRegion;
-        std::optional<int> videoQualityMode;
-        std::optional<int> messageCount;
-        std::optional<int> memberCount;
-        threadMetadata thread_metadata;
-        threadMember member;
-        std::optional<int> defaultAutoArchiveDuration;
-        std::optional<std::string> permissions;
-        std::optional<int> flags;
-        std::optional<int> totalMessageSent;
-        std::unordered_map<long, tag> availableTags;
-        std::vector<long> appliedTags;
-        defaultReaction defaultReactionEmoji;
-        std::optional<int> defaultThreadRateLimitPerUse;
-        std::optional<int> defaultSortOrder;
-        std::optional<int> defaultForumLayout;
-    };
-
-    class timestamps {
-
-    };
-
-    class party {
-
-    };
-
-    class assets {
-
-    };
-
-    class secrets {
-
-    };
-
-    class buttons {
-
-    };
-
-    class activity {
-        std::optional<std::string> name;
-        std::optional<int> type;
-        std::optional<std::string> url;
-        std::optional<int> createdAt;
-        timestamps timestamps;
-        std::optional<long> applicationId;
-        std::optional<std::string> details;
-        std::optional<std::string> state;
-        emoji emoji;
-        party party;
-        assets assets;
-        secrets secrets;
-        std::optional<bool> instance;
-        std::optional<int> flags;
-        buttons buttons;
-    };
-
-    class presenceUpdate {
-        user user;
-        std::optional<long> guildId;
-        std::optional<std::string> status;
-
-    };
-
-    class stageInstance {
-        std::optional<long> id;
-        std::optional<long> guildId;
-        std::optional<long> channelId;
-        std::optional<std::string> topic;
-        std::optional<int> privacyLevel;
-        std::optional<bool> discoveryDisabled;
-        std::optional<long> guildScheduledEventId;
-    };
-
-    class guildScheduledEvent {
-
-    };
-
-
-    class inviteStageInstance {
-    public:
-        friend class boost::serialization::access;
-
-        template <typename Archive>
-        void serialize(Archive &ar, const unsigned int version) { ar & id; }
-        int id;
-    };
-
-    class voiceRegion {
-        std::optional<std::string> id;
-        std::optional<std::string> name;
-        std::optional<bool> optimal;
-        std::optional<bool> deprecated;
-        std::optional<bool> custom;
-    };
-
-    class guildPreview {
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<std::string> icon;
-        std::optional<std::string> splash;
-        std::optional<std::string> discoverySplash;
-        std::unordered_map<long, emoji> emojis;
-        std::vector<std::string> features;
-        std::optional<int> approximateMemberCount;
-        std::optional<int> approximatePresenceCount;
-        std::optional<std::string> description;
-        std::unordered_map<long, sticker> stickers;
-    };
-
-    class account {
-        std::optional<std::string> id;
-        std::optional<std::string> name;
-    };
-
-    class integration {
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<std::string> type;
-        std::optional<bool> enabled;
-        std::optional<bool> syncing;
-        std::optional<long> role_id;
-        std::optional<bool> enable_emoticons;
-        std::optional<int> expire_behavior;
-        std::optional<int> expire_grace_period;
-        user user;
-        account account;
-        std::optional<std::string> synced_at;
-        std::optional<int> subscriber_count;
-        std::optional<bool> revoked;
-        std::optional<bool> application;
-        std::vector<std::string> scopes;
-    };
-
-    class guildWidgetSettings {
-        std::optional<long> channelId;
-        std::optional<bool> enabled;
-    };
-
-    class guildWidget {
-        std::optional<long> id;
-        std::optional<std::string> name;
-        std::optional<std::string> instantInvite;
-        std::unordered_map<long, channel> channels;
-        std::unordered_map<long, user> members;
-        std::optional<int> presenceCount;
-    };
-
-    class ban {
-        user user;
-        std::string reason;
-    };
-
-    class guild {
-private:
-    friend class boost::serialization::access;
-
-    template <typename Archive>
-    [[maybe_unused]] void serialize(Archive &ar, const unsigned int version) {
-        ar & id;
-        ar & name;
-        ar & icon;
-        ar & iconHash;
-        ar & splash;
-        ar & discoverySplash;
-        ar & owner;
-        ar & ownerId;
-        ar & permissions;
-        ar & afkChannelId;
-        ar & afkTimeout;
-        ar & widget_enabled;
-        ar & widgetChannelId;
-        ar & verification_level;
-        ar & defaultMessageNotifications;
-        ar & explicitContentFilter;
-        //std::ar & roles;
-        //std::ar & emojis;
-        ar & features;
-        ar & mfaLevel;
-        ar & applicationId;
-        ar & systemChannelId;
-        ar & systemChannelFlags;
-        ar & rulesChannelId;
-        ar & maxPresences;
-        ar & maxMembers;
-        ar & vanityUrlCode;
-        ar & description;
-        ar & banner;
-        ar & premiumTier;
-        ar & premiumSubscriptionCount;
-        ar & preferredLocale;
-        ar & publicUpdatesChannelId;
-        ar & maxVideoChannelUsers;
-        ar & approximateMemberCount;
-        ar & welcome_screen;
-        ar & nsfwLevel;
-        //std::ar & stickers;
-        ar & premiumProgressBarEnabled;
-
-    }
-
-    const static guildMember defaultGuildMember;
-public:
-    std::optional<long> id;
-    std::optional<std::string> name;
-    std::optional<std::string> icon;
-    std::optional<std::string> iconHash;
-    std::optional<std::string> splash;
-    std::optional<std::string> discoverySplash;
-    std::optional<bool> owner;
-    std::optional<long> ownerId;
-    std::optional<std::string> permissions;
-    std::optional<long> afkChannelId;
-    std::optional<int> afkTimeout;
-    std::optional<bool> widget_enabled;
-    std::optional<long> widgetChannelId;
-    std::optional<int> verification_level;
-    std::optional<int> defaultMessageNotifications;
-    std::optional<int> explicitContentFilter;
-    std::unordered_map<long, role> roles;
-    std::unordered_map<long, emoji> emojis;
-    std::vector<std::string> features;
-    std::optional<int> mfaLevel;
-    std::optional<long> applicationId;
-    std::optional<long> systemChannelId;
-    std::optional<int> systemChannelFlags;
-    std::optional<long> rulesChannelId;
-    std::optional<int> maxPresences;
-    std::optional<int> maxMembers;
-    std::optional<std::string> vanityUrlCode;
-    std::optional<std::string> description;
-    std::optional<std::string> banner;
-    std::optional<int> premiumTier;
-    std::optional<int> premiumSubscriptionCount;
-    std::optional<std::string> preferredLocale;
-    std::optional<long> publicUpdatesChannelId;
-    std::optional<int> maxVideoChannelUsers;
-    std::optional<int> approximateMemberCount;
-    std::optional<int> approximatePresenceCount;
-    welcomeScreen welcome_screen;
-    std::optional<int> nsfwLevel;
-    std::unordered_map<long, sticker> stickers;
-    std::optional<bool> premiumProgressBarEnabled;
-
-    guild modifyGuild(guild guildOptions);
-    guild delteGuild();
-    std::unordered_map<long, channel> getChannels();
-    std::unordered_map<long, channel> fetchChannels();
-    channel createChannel(channel channelOptions);
-    channel modifyChannel(channel channelOptions);
-    std::unordered_map<long, channel> getActiveThreads();
-    std::unordered_map<long, channel> fetchActiveThreads();
-    std::unordered_map<long, threadMember> getActiveThreadMembers(channel thread);
-    std::unordered_map<long, threadMember> fetchActiveThreadMembers(channel thread);
-    std::unordered_map<long, guildMember> getGuildMember(int limit = 1, long after = 0);
-    std::unordered_map<long, guildMember> getGuildMember(int limit = 1, std::string after = 0);
-    std::unordered_map<long, guildMember> fetchGuildMember(int limit = 1, long after = 0);
-    std::unordered_map<long, guildMember> fetchGuildMember(int limit = 1, std::string after = 0);
-    std::unordered_map<long, guildMember> searchGuildMember(std::string query = "", int limit = 1);
-    guildMember addGuildMember(long userId, std::string access_token, guildMember guildMemberOptions = defaultGuildMember);
-    guildMember addGuildMember(std::string userId, std::string access_token, guildMember guildMemberOptions = defaultGuildMember);
-    guildMember modifyGuildMember(long userId, guildMember guildMemberOptions = defaultGuildMember);
-    guildMember modifyGuildMember(std::string userId, guildMember guildMemberOptions = defaultGuildMember);
-    guildMember modifyCurrentMember(std::string nick = "");
-    void addGuildMemberRole(long userId, long roleId);
-    void addGuildMemberRole(std::string userId, std::string roleId);
-    void removeGuildMember(long userId);
-    void removeGuildMember(std::string userId);
-    std::unordered_map<user, ban> getGuildBans(int limit = 1000, long after = -1, long before = -1);
-    std::unordered_map<user, ban> getGuildBans(int limit = 1000, std::string after = "", std::string before = "");
-    ban getGuildBan(long userId);
-    ban getGuildBan(std::string userId);
-    void createGuildBan(long userId, int deleteMessageSeconds = 0);
-    void createGuildBan(std::string userId, int deleteMessageSeconds = 0);
-    void removeGuildBan(long userId);
-    void removeGuildBan(std::string userId);
-    std::unordered_map<long, role> getGuildRoles();
-    std::unordered_map<long, role> fetchGuildRoles();
-    role createGuildRole(role roleOptions);
-    role modifyGuildRolePosition(long roleId, int position = -1);
-    role modifyGuildRolePosition(std::string roleId, int position = -1);
-    role modifyGuildRole(long roleId, role roleOptions);
-    role modifyGuildRole(std::string roleId, role roleOptions);
-    int modifyGuildMFALevel(const int& level);
-    void deleteGuildRole(const long& roleId);
-    void deleteGuildRole(const std::string& roleId);
-    int getGuildPruneCount(const int& days = 7, const std::vector<long>& includeRoles = {});
-    int getGuildPruneCount(const int& days = 7, const std::vector<std::string>& includeRoles = {});
-    int beginGuildPrune(const int& days = 7, const bool& computePruneCound = true, const std::vector<long>& includeRoles = {});
-    int beginGuildPrune(const int& days = 7, const bool& computePruneCound = true, const std::vector<std::string>& includeRoles = {});
-    std::unordered_map<long,voiceRegion> getVoiceRegions();
-    inviteMetadata getGuildInvites();
-    integration getGuildIntegrations();
-    void deleteIntegration(const int& integrationId);
-    guildWidgetSettings getGuildWidgetSettings();
-    guildWidget modifyGuildWidget();
-    guildWidget getGuildWidget();
-    invite getGuildVanityURL();
-    std::string getGuildWidgetImage(const std::string& style);
-    welcomeScreen getGuildWelcomeScreen();
-    welcomeScreen modifyGuildWelcomeScreen(const welcomeScreen& welcomeScreenOptions);
-    void modifyCurrentUserVoiceState(const voiceState& voiceStateOptions);
-    void modifyUserVoiceState(const long& userId,const voiceState& voiceStateOptions);
-    void modifyUserVoiceState(const std::string& userId,const voiceState& voiceStateOptions);
-    };
-
-    class invite {
-        std::optional<std::string> code;
-        guild guild;
-        channel channel;
-        user inviter;
-        std::optional<int> targetType;
-        user targetUser;
-        application targetApplication;
-        std::optional<int> approximatePresenceCount;
-        std::optional<int> approximateMemberCount;
-        std::optional<std::string> expiresAt;
-        inviteStageInstance stageInstance;
-        guildScheduledEvent guildScheduledEvent;
-    };
-
-    class inviteMetadata : public invite {
-        std::unordered_map<long, guildMember> members;
-        std::optional<int> participantCount;
-        std::optional<int> speakerCount;
-        std::optional<std::string> topic;
-    };
-
-    class unavailableGuild {
-    public:
-        std::optional<long> id;
-        std::optional<bool> unavailable;
-    };
-
-    class partialApplication {
-    public:
-        std::optional<long> id;
-        std::optional<int> flags;
-    };
-
     class guildCacheObject {
         guild guild;
         std::optional<std::string> joinedAt;
@@ -521,13 +36,33 @@ public:
 
     class readyEvent {
     public:
-        user user;
+        user me;
         std::vector<unavailableGuild> guilds;
         std::optional<int> shard[2];
-        partialApplication application;
+        application application;
     };
 
     class resumedEvent {};
+
+    class applicationCommandPermissionsUpdateEvent {
+
+    };
+
+    class autoModerationRuleCreateEvent {
+
+    };
+
+    class autoModerationRuleUpdateEvent {
+
+    };
+
+    class autoModerationRuleDeleteEvent {
+
+    };
+
+    class autoModerationActionExecutionEvent {
+
+    };
 
     class channelCreateEvent {
     public:
@@ -542,6 +77,34 @@ public:
     class channelDeleteEvent {
     public:
         channel channel;
+    };
+
+    class channelPinUpdateEvent {
+
+    };
+
+    class threadCreateEvent {
+
+    };
+
+    class threadUpdateEvent {
+
+    };
+
+    class threadDeleteEvent {
+
+    };
+
+    class threadListSyncEvent {
+
+    };
+
+    class threadMemberUpdateEvent {
+
+    };
+
+    class threadMembersUpdateEvent {
+
     };
 
     class guildCreateEvent {
@@ -571,45 +134,239 @@ public:
         unavailableGuild unavailableGuild;
     };
 
+    class guildBanAddEvent {
+
+    };
+
+    class guildBanRemoveEvent {
+
+    };
+
+    class guildEmojiUpdateEvent {
+
+    };
+
+    class guildStickersUpdateEvent {
+
+    };
+
+    class guildIntegrationsUpdateEvent {
+
+    };
+
+    class guildMemberAddEvent {
+
+    };
+
+    class guildMemberRemoveEvent {
+
+    };
+
+    class guildMemberUpdateEvent {
+
+    };
+
+    class guildMembersChunkEvent {
+
+    };
+
+    class guildRoleCreateEvent {
+
+    };
+
+    class guildRoleUpdateEvent {
+
+    };
+
+    class guildRoleDeleteEvent {
+
+    };
+
+    class guildScheduledEventCreateEvent {
+
+    };
+
+    class guildScheduledEventUpdateEvent {
+
+    };
+
+    class guildScheduledEventDeleteEvent {
+
+    };
+
+    class guildScheduledEventUserAddEvent {
+
+    };
+
+    class guildScheduledEventUserRemoveEvent {
+
+    };
+
+    class integrationCreateEvent {
+
+    };
+
+    class integrationUpdateEvent {
+
+    };
+
+    class integrationDeleteEvent {
+
+    };
+
+    class inviteCreateEvent {
+
+    };
+
+    class inviteDeleteEvent {
+
+    };
+
+    class messageCreateEvent {
+
+    };
+
+    class messageUpdateEvent {
+
+    };
+
+    class messageDeleteEvent {
+
+    };
+
+    class messageDeleteBulkEvent {
+
+    };
+
+    class messageReactionAddEvent {
+
+    };
+
+    class messageReactionRemoveAllEvent {
+
+    };
+
+    class messageReactionRemoveEmojiEvent {
+
+    };
+
+    class presenceUpdateEvent {
+
+    };
+
+    class stageInstanceCreateEvent {
+
+    };
+
+    class stageInstanceUpdateEvent {
+
+    };
+
+    class stageInstanceDeleteEvent {
+
+    };
+
+    class typingStartEvent {
+
+    };
+
+    class userUpdateEvent {
+
+    };
+
+    class voiceStateUpdateEvent {
+
+    };
+
+    class voiceServerUpdateEvent {
+
+    };
+
+    class webhooksUpdateEvent {
+
+    };
+
+
+
     class eventData {
     private:
         friend class client;
-        friend class guildOptions;
-        friend class channelOptions;
-        static roleTags getRoleTagsData(const json& jsonData);
-        static role getRoleData(const json& jsonData);
-        static emoji getEmojiData(const json& jsonData);
-        static partialApplication getPartialApplicationData(const json& jsonData);
-        static unavailableGuild getUnavailableGuildData(const json& jsonData);
-        static welcomeScreenChannelStructure getWelcomeScreenChannelStructureData(const json& jsonData);
-        static welcomeScreen getWelcomeScreenData(const json& jsonData);
-        static sticker getStickerData(const json& jsonData);
-        static guild getGuildData(const json& jsonData);
-        static guildMember getGuildMemberData(const json &jsonData, const long& guildId);
-        static voiceState getVoiceStateData(const json& jsonData, const long& guildId);
-        static guildPreview getGuildPreviewData(const json& jsonData);
-        static overwrite getOverwriteData(const json& jsonData);
-        static channel getChannelData(const json& jsonData, const long& guildId = 0);
-        static threadMetadata getThreadMetadataData(const json& jsonData);
-        static threadMember getThreadMemberData(const json& jsonData, const long& guildId);
-        static tag getTagData(const json& jsonData);
-        static defaultReaction getDefaultReactionData(const json& jsonData);
 
         [[nodiscard]] readyEvent getReadyEventData(const json& jsonData);
         [[nodiscard]] resumedEvent getResumedEventData(const json& jsonData) const;
 
+        [[nodiscard]] applicationCommandPermissionsUpdateEvent getApplicationCommandPermissionsUpdateData(const json& jsonData);
+
+        [[nodiscard]] autoModerationRuleCreateEvent getAutoModerationRuleCreateData(const json& jsonData);
+        [[nodiscard]] autoModerationRuleUpdateEvent getAutoModerationRuleUpdateData(const json& jsonData);
+        [[nodiscard]] autoModerationRuleDeleteEvent getAutoModerationRuleDeleteData(const json& jsonData);
+        [[nodiscard]] autoModerationActionExecutionEvent getAutoModerationActionExecutionData(const json& jsonData);
+
         [[nodiscard]] channelCreateEvent getChannelCreateEventData(const json& jsonData);
         [[nodiscard]] channelUpdateEvent getChannelUpdateEventData(const json& jsonData);
         [[nodiscard]] channelDeleteEvent getChannelDeleteEventData(const json& jsonData);
+        [[nodiscard]] channelPinUpdateEvent getChannelPinUpdateData(const json& jsonData);
+
+        [[nodiscard]] threadCreateEvent getThreadCreateData(const json& jsonData);
+        [[nodiscard]] threadUpdateEvent getThreadUpdateData(const json& jsonData);
+        [[nodiscard]] threadDeleteEvent getThreadDeleteData(const json& jsonData);
+        [[nodiscard]] threadListSyncEvent getThreadListSyncData(const json& jsonData);
+        [[nodiscard]] threadMemberUpdateEvent getThreadMemberUpdateData(const json& jsonData);
+        [[nodiscard]] threadMembersUpdateEvent getThreadMembersUpdateData(const json& jsonData);
 
         [[nodiscard]] guildCreateEvent getGuildCreateEventData(const json& jsonData);
         [[nodiscard]] guildUpdateEvent getGuildUpdateEventData(const json& jsonData);
         [[nodiscard]] guildDeleteEvent getGuildDeleteEventData(const json& jsonData);
+        [[nodiscard]] guildBanAddEvent getGuildBanAddData(const json& jsonData);
+        [[nodiscard]] guildBanRemoveEvent getGuildBanRemoveData(const json& jsonData);
+        [[nodiscard]] guildEmojiUpdateEvent getGuildEmojiUpdateData(const json& jsonData);
+        [[nodiscard]] guildStickersUpdateEvent getGuildStickersUpdateData(const json& jsonData);
+        [[nodiscard]] guildIntegrationsUpdateEvent getGuildIntegrationsUpdateData(const json& jsonData);
 
-        static void cacheGuild(const guildCacheObject& guildToBeCached);
-        static void getGuildFromCache(const long& guildIdToGetFromCache, const int& shard);
-        static void removeGuildFromCache(const long& guildIdToBeDeletedFromCache);
-        static void removeAllGuildsFromCache();
+        [[nodiscard]] guildMemberAddEvent getGuildMemberAddData(const json& jsonData);
+        [[nodiscard]] guildMemberRemoveEvent getGuildMemberRemoveData(const json& jsonData);
+        [[nodiscard]] guildMemberUpdateEvent getGuildMemberUpdateData(const json& jsonData);
+        [[nodiscard]] guildMembersChunkEvent getGuildMembersChunkData(const json& jsonData);
+
+        [[nodiscard]] guildRoleCreateEvent getGuildRoleCreateData(const json& jsonData);
+        [[nodiscard]] guildRoleUpdateEvent getGuildRoleUpdateData(const json& jsonData);
+        [[nodiscard]] guildRoleDeleteEvent getGuildRoleDeleteData(const json& jsonData);
+
+        [[nodiscard]] guildScheduledEventCreateEvent getGuildScheduledEventCreateData(const json& jsonData);
+        [[nodiscard]] guildScheduledEventUpdateEvent getGuildScheduledEventUpdateData(const json& jsonData);
+        [[nodiscard]] guildScheduledEventDeleteEvent getGuildScheduledEventDeleteData(const json& jsonData);
+        [[nodiscard]] guildScheduledEventUserAddEvent getGuildScheduledEventUserAddData(const json& jsonData);
+        [[nodiscard]] guildScheduledEventUserRemoveEvent getGuildScheduledEventUserRemoveData(const json& jsonData);
+
+        [[nodiscard]] integrationCreateEvent getIntegrationCreateData(const json& jsonData);
+        [[nodiscard]] integrationUpdateEvent getIntegrationUpdateData(const json& jsonData);
+        [[nodiscard]] integrationDeleteEvent getIntegrationDeleteData(const json& jsonData);
+
+        [[nodiscard]] inviteCreateEvent getInviteCreateData(const json& jsonData);
+        [[nodiscard]] inviteDeleteEvent getInviteDeleteData(const json& jsonData);
+
+        [[nodiscard]] messageCreateEvent getMessageCreateData(const json& jsonData);
+        [[nodiscard]] messageUpdateEvent getMessageUpdateData(const json& jsonData);
+        [[nodiscard]] messageDeleteEvent getMessageDeleteData(const json& jsonData);
+        [[nodiscard]] messageDeleteBulkEvent getMessageDeleteBulkData(const json& jsonData);
+        [[nodiscard]] messageReactionAddEvent getMessageReactionAddData(const json& jsonData);
+        [[nodiscard]] messageReactionRemoveAllEvent getMessageReactionRemoveAllData(const json& jsonData);
+        [[nodiscard]] messageReactionRemoveEmojiEvent getMessageReactionRemoveEmojiData(const json& jsonData);
+
+        [[nodiscard]] presenceUpdateEvent getPresenceUpdateData(const json& jsonData);
+
+        [[nodiscard]] stageInstanceCreateEvent getStageInstanceCreateData(const json& jsonData);
+        [[nodiscard]] stageInstanceUpdateEvent getStageInstanceUpdateData(const json& jsonData);
+        [[nodiscard]] stageInstanceDeleteEvent getStageInstanceDeleteData(const json& jsonData);
+
+        [[nodiscard]] typingStartEvent getTypingStartData(const json& jsonData);
+        [[nodiscard]] userUpdateEvent getUserUpdateData(const json& jsonData);
+
+        [[nodiscard]] voiceStateUpdateEvent getVoiceStateUpdateData(const json& jsonData);
+        [[nodiscard]] voiceServerUpdateEvent getVoiceServerUpdateData(const json& jsonData);
+
+        [[nodiscard]] webhooksUpdateEvent getWebhooksUpdateEvent(const json& jsonData);
+
     public:
         readyEvent readyEventData;
         resumedEvent resumedEventData;
@@ -623,127 +380,159 @@ public:
         guildDeleteEvent guildDeleteData;
     };
 
-
-    class guildOptions {
-    private:
-        friend class client;
-        std::string token;
-        std::unordered_map<long, guild> guilds;
-    public:
-        [[maybe_unused]] guild createGuild(const guild& guildOptions, const std::vector<role>& roles = {}, const std::vector<channel>& channels = {});
-        [[maybe_unused]] [[nodiscard]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
-        [[maybe_unused]] [[nodiscard]] guild getGuild(const std::string& guildId, const bool& withCounts = true, const bool& cacheObject = true) const;
-        guild getGuildFromCache(const long& guildId) const;
-        guild getGuildFromCache(const std::string& guildId) const;
-        bool guildExistsInCache(const long& guildId) const;
-        bool guildExistsInCache(const std::string& guildId) const;
-        guildPreview getGuildPreview(const long& guildId) const;
-        guildPreview getGuildPreview(const std::string& guildId) const;
-    };
-
-    class channelOptions {
-    private:
-        std::unordered_map<long, channel> channels;
-    public:
-        channel create(const channel& channelOptions);
-        channel get(const long& channelId,const bool& cacheObject = true) const;
-        channel get(const std::string& channelId,const bool& cacheObject = true) const;
-        channel getFromCache(const long& channelId) const;
-        channel getFromCache(const std::string& channelId) const;
-        bool existsInCache(const long& guildId) const;
-        bool existsInCache(const std::string& guildId) const;
-    };
-
-
     class onEvent {
     private:
         friend class client;
         std::function<void(readyEvent)> readyFunction;
         std::function<void(resumedEvent)> resumedFunction;
 
+        std::function<void(applicationCommandPermissionsUpdateEvent)> applicationCommandPermissionsUpdateFunction;
+
+        std::function<void(autoModerationRuleCreateEvent)> autoModerationRuleCreateFunction;
+        std::function<void(autoModerationRuleUpdateEvent)> autoModerationRuleUpdateFunction;
+        std::function<void(autoModerationRuleDeleteEvent)> autoModerationRuleDeleteFunction;
+        std::function<void(autoModerationActionExecutionEvent)> autoModerationActionExecutionFunction;
+
         std::function<void(channelCreateEvent)> channelCreateFunction;
         std::function<void(channelUpdateEvent)> channelUpdateFunction;
         std::function<void(channelDeleteEvent)> channelDeleteFunction;
+        std::function<void(channelPinUpdateEvent)> channelPinUpdateFunction;
+
+        std::function<void(threadCreateEvent)> threadCreateFunction;
+        std::function<void(threadUpdateEvent)> threadUpdateFunction;
+        std::function<void(threadDeleteEvent)> threadDeleteFunction;
+        std::function<void(threadListSyncEvent)> threadListSyncFunction;
+        std::function<void(threadMemberUpdateEvent)> threadMemberUpdateFunction;
+        std::function<void(threadMembersUpdateEvent)> threadMembersUpdateFunction;
 
         std::function<void(guildCreateEvent)> guildCreateFunction;
         std::function<void(guildUpdateEvent)> guildUpdateFunction;
         std::function<void(guildDeleteEvent)> guildDeleteFunction;
+        std::function<void(guildBanAddEvent)> guildBanAddFunction;
+        std::function<void(guildBanRemoveEvent)> guildBanRemoveFunction;
+        std::function<void(guildEmojiUpdateEvent)> guildEmojiUpdateFunction;
+        std::function<void(guildStickersUpdateEvent)> guildStickersUpdateFunction;
+        std::function<void(guildIntegrationsUpdateEvent)> guildIntegrationsUpdateFunction;
+
+        std::function<void(guildMemberAddEvent)> guildMemberAddFunction;
+        std::function<void(guildMemberRemoveEvent)> guildMemberRemoveFunction;
+        std::function<void(guildMemberUpdateEvent)> guildMemberUpdateFunction;
+        std::function<void(guildMembersChunkEvent)> guildMembersChunkFunction;
+        std::function<void(guildRoleCreateEvent)> guildRoleCreateFunction;
+        std::function<void(guildRoleUpdateEvent)> guildRoleUpdateFunction;
+        std::function<void(guildRoleDeleteEvent)> guildRoleDeleteFunction;
+
+        std::function<void(guildScheduledEventCreateEvent)> guildScheduledEventCreateFunction;
+        std::function<void(guildScheduledEventUpdateEvent)> guildScheduledEventUpdateFunction;
+        std::function<void(guildScheduledEventDeleteEvent)> guildScheduledEventDeleteFunction;
+        std::function<void(guildScheduledEventUserAddEvent)> guildScheduledEventUserAddFunction;
+        std::function<void(guildScheduledEventUserRemoveEvent)> guildScheduledEventUserRemoveFunction;
+
+        std::function<void(integrationCreateEvent)> integrationCreateFunction;
+        std::function<void(integrationUpdateEvent)> integrationUpdateFunction;
+        std::function<void(integrationDeleteEvent)> integrationDeleteFunction;
+
+        std::function<void(inviteCreateEvent)> inviteCreateFunction;
+        std::function<void(inviteDeleteEvent)> inviteDeleteFunction;
+
+        std::function<void(messageCreateEvent)> messageCreateFunction;
+        std::function<void(messageUpdateEvent)> messageUpdateFunction;
+        std::function<void(messageDeleteEvent)> messageDeleteFunction;
+        std::function<void(messageDeleteBulkEvent)> messageDeleteBulkFunction;
+        std::function<void(messageReactionAddEvent)> messageReactionAddFunction;
+        std::function<void(messageReactionRemoveAllEvent)> messageReactionRemoveAllFunction;
+        std::function<void(messageReactionRemoveEmojiEvent)> messageReactionRemoveEmojiFunction;
+
+        std::function<void(presenceUpdateEvent)> presenceUpdateFunction;
+
+        std::function<void(stageInstanceCreateEvent)> stageInstanceCreateFunction;
+        std::function<void(stageInstanceUpdateEvent)> stageInstanceUpdateFunction;
+        std::function<void(stageInstanceDeleteEvent)> stageInstanceDeleteFunction;
+
+        std::function<void(typingStartEvent)> typingStartFunction;
+        std::function<void(userUpdateEvent)> userUpdateFunction;
+
+        std::function<void(voiceStateUpdateEvent)> voiceStateUpdateFunction;
+        std::function<void(voiceServerUpdateEvent)> voiceServerUpdateFunction;
+
+        std::function<void(webhooksUpdateEvent)> webhooksUpdateFunction;
+
 
     public:
         [[maybe_unused]] void ready(const std::function<void(readyEvent)>& userFunction);
         [[maybe_unused]] void resumed(const std::function<void(resumedEvent)>& userFunction);
 
-        [[maybe_unused]] void applicationCommandPermissionsUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void applicationCommandPermissionsUpdate(const std::function<void(applicationCommandPermissionsUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void autoModerationRuleCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationRuleUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationRuleDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void autoModerationActionExecution(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void autoModerationRuleCreate(const std::function<void(autoModerationRuleCreateEvent)>& userFunction);
+        [[maybe_unused]] void autoModerationRuleUpdate(const std::function<void(autoModerationRuleUpdateEvent)>& userFunction);
+        [[maybe_unused]] void autoModerationRuleDelete(const std::function<void(autoModerationRuleDeleteEvent)>& userFunction);
+        [[maybe_unused]] void autoModerationActionExecution(const std::function<void(autoModerationActionExecutionEvent)>& userFunction);
 
         [[maybe_unused]] void channelCreate(const std::function<void(channelCreateEvent)>& userFunction);
         [[maybe_unused]] void channelUpdate(const std::function<void(channelUpdateEvent)>& userFunction);
         [[maybe_unused]] void channelDelete(const std::function<void(channelDeleteEvent)>& userFunction);
-        [[maybe_unused]] void channelPinUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void channelPinUpdate(const std::function<void(channelPinUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void threadCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadListSync(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadMemberUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void threadMembersUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void threadCreate(const std::function<void(threadCreateEvent)>& userFunction);
+        [[maybe_unused]] void threadUpdate(const std::function<void(threadUpdateEvent)>& userFunction);
+        [[maybe_unused]] void threadDelete(const std::function<void(threadDeleteEvent)>& userFunction);
+        [[maybe_unused]] void threadListSync(const std::function<void(threadListSyncEvent)>& userFunction);
+        [[maybe_unused]] void threadMemberUpdate(const std::function<void(threadMemberUpdateEvent)>& userFunction);
+        [[maybe_unused]] void threadMembersUpdate(const std::function<void(threadMembersUpdateEvent)>& userFunction);
 
         [[maybe_unused]] void guildCreate(const std::function<void(guildCreateEvent)>& userFunction);
         [[maybe_unused]] void guildUpdate(const std::function<void(guildUpdateEvent)>& userFunction);
         [[maybe_unused]] void guildDelete(const std::function<void(guildDeleteEvent)>& userFunction);
-        [[maybe_unused]] void guildBanAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildBanRemove(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildEmojiUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildStickersUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildIntegrationsUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void guildBanAdd(const std::function<void(guildBanAddEvent)>& userFunction);
+        [[maybe_unused]] void guildBanRemove(const std::function<void(guildBanRemoveEvent)>& userFunction);
+        [[maybe_unused]] void guildEmojiUpdate(const std::function<void(guildEmojiUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildStickersUpdate(const std::function<void(guildStickersUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildIntegrationsUpdate(const std::function<void(guildIntegrationsUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void guildMemberAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMemberRemove(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMemberUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildMembersChunk(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void guildMemberAdd(const std::function<void(guildMemberAddEvent)>& userFunction);
+        [[maybe_unused]] void guildMemberRemove(const std::function<void(guildMemberRemoveEvent)>& userFunction);
+        [[maybe_unused]] void guildMemberUpdate(const std::function<void(guildMemberUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildMembersChunk(const std::function<void(guildMembersChunkEvent)>& userFunction);
 
-        [[maybe_unused]] void guildRoleCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildRoleUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildRoleDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void guildRoleCreate(const std::function<void(guildRoleCreateEvent)>& userFunction);
+        [[maybe_unused]] void guildRoleUpdate(const std::function<void(guildRoleUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildRoleDelete(const std::function<void(guildRoleDeleteEvent)>& userFunction);
 
-        [[maybe_unused]] void guildScheduledEventCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUserAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void guildScheduledEventUserRemove(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void guildScheduledEventCreate(const std::function<void(guildScheduledEventCreateEvent)>& userFunction);
+        [[maybe_unused]] void guildScheduledEventUpdate(const std::function<void(guildScheduledEventUpdateEvent)>& userFunction);
+        [[maybe_unused]] void guildScheduledEventDelete(const std::function<void(guildScheduledEventDeleteEvent)>& userFunction);
+        [[maybe_unused]] void guildScheduledEventUserAdd(const std::function<void(guildScheduledEventUserAddEvent)>& userFunction);
+        [[maybe_unused]] void guildScheduledEventUserRemove(const std::function<void(guildScheduledEventUserRemoveEvent)>& userFunction);
 
-        [[maybe_unused]] void integrationCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void integrationUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void integrationDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void integrationCreate(const std::function<void(integrationCreateEvent)>& userFunction);
+        [[maybe_unused]] void integrationUpdate(const std::function<void(integrationUpdateEvent)>& userFunction);
+        [[maybe_unused]] void integrationDelete(const std::function<void(integrationDeleteEvent)>& userFunction);
 
-        [[maybe_unused]] void inviteCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void inviteDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void inviteCreate(const std::function<void(inviteCreateEvent)>& userFunction);
+        [[maybe_unused]] void inviteDelete(const std::function<void(inviteDeleteEvent)>& userFunction);
 
-        [[maybe_unused]] void messageCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageDelete(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageDeleteBulk(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionAdd(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionRemoveAll(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void messageReactionRemoveEmoji(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void messageCreate(const std::function<void(messageCreateEvent)>& userFunction);
+        [[maybe_unused]] void messageUpdate(const std::function<void(messageUpdateEvent)>& userFunction);
+        [[maybe_unused]] void messageDelete(const std::function<void(messageDeleteEvent)>& userFunction);
+        [[maybe_unused]] void messageDeleteBulk(const std::function<void(messageDeleteBulkEvent)>& userFunction);
+        [[maybe_unused]] void messageReactionAdd(const std::function<void(messageReactionAddEvent)>& userFunction);
+        [[maybe_unused]] void messageReactionRemoveAll(const std::function<void(messageReactionRemoveAllEvent)>& userFunction);
+        [[maybe_unused]] void messageReactionRemoveEmoji(const std::function<void(messageReactionRemoveEmojiEvent)>& userFunction);
 
-        [[maybe_unused]] void presenceUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void presenceUpdate(const std::function<void(presenceUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void stageInstanceCreate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void stageInstanceUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void stageInstanceDelete(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void stageInstanceCreate(const std::function<void(stageInstanceCreateEvent)>& userFunction);
+        [[maybe_unused]] void stageInstanceUpdate(const std::function<void(stageInstanceUpdateEvent)>& userFunction);
+        [[maybe_unused]] void stageInstanceDelete(const std::function<void(stageInstanceDeleteEvent)>& userFunction);
 
-        [[maybe_unused]] void typingStart(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void userUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void typingStart(const std::function<void(typingStartEvent)>& userFunction);
+        [[maybe_unused]] void userUpdate(const std::function<void(userUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void voiceStateUpdate(const std::function<void(eventData)>& userFunction);
-        [[maybe_unused]] void voiceServerUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void voiceStateUpdate(const std::function<void(voiceStateUpdateEvent)>& userFunction);
+        [[maybe_unused]] void voiceServerUpdate(const std::function<void(voiceServerUpdateEvent)>& userFunction);
 
-        [[maybe_unused]] void webhooksUpdate(const std::function<void(eventData)>& userFunction);
+        [[maybe_unused]] void webhooksUpdate(const std::function<void(webhooksUpdateEvent)>& userFunction);
     };
 }
 

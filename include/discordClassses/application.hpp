@@ -20,6 +20,7 @@ namespace helios {
     class application {
     private:
         friend class message;
+        friend class eventData;
         static application getApplicationData(const nlohmann::json& jsonData);
     public:
         std::optional<long> id;

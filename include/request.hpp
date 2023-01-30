@@ -20,7 +20,7 @@ private:
     static int httpsResponseCode;
     static std::string httpsResponseReason;
  public:
-    [[nodiscard]] static std::string httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method,const std::string& authorization = "");
+    [[nodiscard]] static std::string httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method, const std::string& authorization = "", const std::string& reason = "");
 };
 
 #endif //HELIOS_REQUEST_HPP

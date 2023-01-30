@@ -4,12 +4,19 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
 #include "../guild/guildMember.hpp"
-#include "discordClassses/user.hpp"
+#include "../user.hpp"
+#include "../../request.hpp"
+#include "token.hpp"
 
+using nlohmann::json;
 namespace helios {
     class message;
     class channelMention {
+    private:
+        friend class message;
+        static channelMention getChannelMentionData(const json& jsonData);
         std::optional<long> id;
         std::optional<long> guildId;
         std::optional<int> type;
@@ -17,6 +24,9 @@ namespace helios {
     };
 
     class forumTag {
+    private:
+        friend class channel;
+        static forumTag getForumTagData(const json& jsonData);
     public:
         std::optional<long> id;
         std::optional<std::string> name;
@@ -26,12 +36,18 @@ namespace helios {
     };
 
     class defaultReaction {
+    private:
+        friend class channel;
+        static defaultReaction getDefaultReactionData(const json& jsonData);
     public:
         std::optional<long> emojiId;
         std::optional<std::string> emojiName;
     };
 
     class threadMetadata {
+    private:
+        friend class channel;
+        static threadMetadata getThreadMetadataData(const json& jsonData);
     public:
         std::optional<bool> archived;
         std::optional<int> autoArchiveDuration;
@@ -42,6 +58,9 @@ namespace helios {
     };
 
     class threadMember {
+    private:
+        friend class channel;
+        static threadMember getThreadMemberData(const json& jsonData);
     public:
         std::optional<long> id;
         std::optional<long> userId;
@@ -51,8 +70,12 @@ namespace helios {
     };
 
     class overwrite {
+    private:
+        friend class channel;
+        static overwrite getOverwriteData(const json& jsonData);
+    public:
         std::optional<long> id;
-        std::optional<int> type;
+        std::optional<std::string> type;
         std::optional<std::string> allow;
         std::optional<std::string> deny;
     };
@@ -63,6 +86,11 @@ namespace helios {
     };
 
     class channel {
+    private:
+        friend class message;
+        friend class channelOptions;
+        friend class eventData;
+        static channel getChannelData(const json& jsonData);
     public:
         std::optional<long> id;
         std::optional<int> type;
@@ -99,8 +127,21 @@ namespace helios {
         std::optional<int> defaultSortOrder;
         std::optional<int> defaultForumLayout;
 
+        [[maybe_unused]] channel modify(const channel& newChannel = helios::channel(), const int& channelType = 0, const std::string& reason = "");
+        [[maybe_unused]] channel close(const std::string& reason = "");
+        [[maybe_unused]] message getMessages(const std::vector<message>& messages);
+        [[maybe_unused]] message getMessage(const message& message);
 
     };
+
+    class channelOptions {
+    public:
+        [[maybe_unused]] channel create(const channel& channelOptions);
+        [[maybe_unused]] [[nodiscard]] static channel get(const long& channelId, const bool& cacheObject = true) ;
+        [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
+        [[maybe_unused]] bool existsInCache(const long& guildId) const;
+    };
+
 } // helios
 
 #endif //HELIOS_CHANNEL_HPP

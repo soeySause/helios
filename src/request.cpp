@@ -10,7 +10,7 @@ using json = nlohmann::json;
 int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
-std::string request::httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method, const std::string& authorization)
+std::string request::httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method, const std::string& authorization, const std::string& reason)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -52,10 +52,13 @@ std::string request::httpsRequest(const std::string& host, const std::string& ta
     req.set(http::field::host, host);
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 
+
     if(!authorization.empty()) req.set(http::field::authorization, "Bot " + authorization);
+    if(!reason.empty()) req.set("X-Audit-Log-Reason", reason);
 
 
-        // Send the HTTP request to the remote host
+
+    // Send the HTTP request to the remote host
         http::write(sock, req);
         beast::flat_buffer buffer;
         http::response<http::string_body> res;

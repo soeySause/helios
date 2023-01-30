@@ -55,7 +55,8 @@ namespace helios {
 
         if(jsonData.contains("mention_channels")) {
             for (const nlohmann::basic_json<>& mentionChannel: jsonData["mention_channels"]) {
-                //messageData.mentions[std::stol(mentionChannel["id"].get<std::string>())] = channel::getChannelData(mentionChannel);
+                messageData.mentionChannels[std::stol(mentionChannel["id"].get<std::string>())] = channelMention::getChannelMentionData(mentionChannel);
+
             }
         }
 
@@ -82,7 +83,7 @@ namespace helios {
         if(jsonData.contains("flags")) messageData.flags = jsonData["flags"];
         if(jsonData.contains("referenced_message") && !jsonData["referenced_message"].is_null()) messageData.referencedMessage = std::make_unique<message>(getMessageData(jsonData["referenced_message"]));
         if(jsonData.contains("interaction")) messageData.interaction = messageInteraction::getMessageInteractionData(jsonData["interaction"]);
-        //if(jsonData.contains("thread")) messageData.thread = channel::getChannelData(jsonData["thread"]);
+        if(jsonData.contains("thread")) messageData.thread = channel::getChannelData(jsonData["thread"]);
 
         for (const nlohmann::basic_json<>& component: jsonData["components"]) {
             //messageData.components.emplace_back(messageComponent::getMessageComponentData(component));

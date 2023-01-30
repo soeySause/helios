@@ -1,11 +1,10 @@
 #include "client.hpp"
 
 namespace helios {
+    std::string token::botToken;
     client::client(const std::string& token) {
-        this->token = token;
-        this->applicationRoleConnectionMetadata.token = token;
-        this->auditLog.token = token;
-        this->guilds.token = token;
+        cache::createCacheDirectory();
+        token::botToken = token;
 
         const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", "", "get", token));
         this->shards = getGateway["shards"];
@@ -169,7 +168,7 @@ namespace helios {
         if(shard->shardStructPtr->reconnect) {
             json reconnectingPayload;
             reconnectingPayload["op"] = 6;
-            reconnectingPayload["d"]["token"] = this->token;
+            reconnectingPayload["d"]["token"] = token::botToken;
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
             reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
             sessionShard->asyncQueue(reconnectingPayload.dump());
@@ -329,7 +328,6 @@ namespace helios {
                     this->onEvent.guildDeleteFunction(guildDeleteData);
                 }
             }
-
         }
     }
 
@@ -399,7 +397,7 @@ namespace helios {
     json client::getIdentifyPayload(const int& shard) {
         json identifyPayload;
         identifyPayload["op"] = 2;
-        identifyPayload["d"]["token"] = this->token;
+        identifyPayload["d"]["token"] = token::botToken;
 
         identifyPayload["d"]["properties"]["os"] = this->properties.os;
         identifyPayload["d"]["properties"]["browser"] = this->properties.browser;
@@ -436,49 +434,52 @@ namespace helios {
         return identifyPayload;
     }
 
-    [[maybe_unused]] void properties::setOs(const std::string &os) {
-        this->os = os;
-    }
+    void client::onExit() {
 
-    [[maybe_unused]] void properties::setBrowser(const std::string &browser) {
-        this->browser = browser;
     }
-
-    [[maybe_unused]] void properties::setDevice(const std::string &device) {
-        this->device = device;
-    }
-
-    [[maybe_unused]] void activities::setName(const std::string &name) {
-        this->name = name;
-    }
-
-    [[maybe_unused]] void activities::setType(const int& type) {
-        this->type = type;
-    }
-
-    [[maybe_unused]] void activities::setUrl(const std::string& url){
-        this->url = url;
-    }
-
-    [[maybe_unused]] void presence::setSince(const int& since) {
-        this->since = since;
-    }
-
-    [[maybe_unused]] void presence::setStatus(const std::string& status) {
-        this->status = status;
-    }
-
-    [[maybe_unused]] void presence::setAfk(const bool& afk) {
-        this->afk = afk;
-    }
-
-    [[maybe_unused]] void client::setLargeThreshold(const int threshold) {
-        this->large_threshold = threshold;
-    }
-
+    
     void client::reconnect() {
 
     }
 
+    [[maybe_unused]] void properties::setOs(const std::string &userInputOs) {
+        this->os = userInputOs;
+    }
+
+    [[maybe_unused]] void properties::setBrowser(const std::string &userInputBrowser) {
+        this->browser = userInputBrowser;
+    }
+
+    [[maybe_unused]] void properties::setDevice(const std::string &userInputDevice) {
+        this->device = userInputDevice;
+    }
+
+    [[maybe_unused]] void activities::setName(const std::string &userInputName) {
+        this->name = userInputName;
+    }
+
+    [[maybe_unused]] void activities::setType(const int& userInputType) {
+        this->type = userInputType;
+    }
+
+    [[maybe_unused]] void activities::setUrl(const std::string& userInputUrl){
+        this->url = userInputUrl;
+    }
+
+    [[maybe_unused]] void presence::setSince(const int& userInputSince) {
+        this->since = userInputSince;
+    }
+
+    [[maybe_unused]] void presence::setStatus(const std::string& userInputStatus) {
+        this->status = userInputStatus;
+    }
+
+    [[maybe_unused]] void presence::setAfk(const bool& userInputAfk) {
+        this->afk = userInputAfk;
+    }
+
+    [[maybe_unused]] void client::setLargeThreshold(const int userInputThreshold) {
+        this->large_threshold = userInputThreshold;
+    }
 } // helios
 

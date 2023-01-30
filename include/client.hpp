@@ -10,13 +10,16 @@
 #include <memory>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/ssl.hpp>
-#include <boost/serialization/serialization.hpp>
 #include <boost/asio.hpp>
+#include <boost/process.hpp>
+#include <openssl/evp.h>
 #include <nlohmann/json.hpp>
 
 #include "ssl/root_certification.hpp"
 #include "session.hpp"
 #include "event.hpp"
+#include "cache.hpp"
+#include "token.hpp"
 #include "request.hpp"
 #include "discordClassses/discordClasses.hpp"
 #include "heliosException.hpp"
@@ -107,7 +110,6 @@ namespace helios {
 
     class client {
     private:
-        std::string token;
         std::string host;
 
         int maxConcurrency;
@@ -119,6 +121,8 @@ namespace helios {
 
         std::condition_variable updateCondition;
         std::mutex mutex;
+
+        void onExit();
 
         void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
         static void stopHeartbeatCycle(const std::shared_ptr<shard>& shard);
