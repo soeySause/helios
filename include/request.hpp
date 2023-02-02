@@ -14,13 +14,14 @@
 #include "heliosException.hpp"
 #include "ssl/root_certification.hpp"
 
- class request
+class request
 {
 private:
     static int httpsResponseCode;
     static std::string httpsResponseReason;
  public:
-    [[nodiscard]] static std::string httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method, const std::string& authorization = "", const std::string& reason = "");
-};
+    static std::string httpsRequest(const std::string& host, const std::string& target, const nlohmann::json& payload, const boost::beast::http::verb& method, const std::string& authorization = "", const std::string& reason = "");
+    static std::string url_encode(const std::string &value);
 
+    };
 #endif //HELIOS_REQUEST_HPP

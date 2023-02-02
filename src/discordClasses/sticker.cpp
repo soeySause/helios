@@ -1,4 +1,5 @@
 #include "discordClassses/sticker.hpp"
+#include <iostream>
 
 namespace helios {
     messageStickerItem messageStickerItem::getMessageStickerItemData(const nlohmann::json &jsonData) {

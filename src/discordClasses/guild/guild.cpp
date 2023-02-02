@@ -155,14 +155,14 @@ namespace helios {
         if(guildOptions.systemChannelId.has_value()) createGuildPayload["system_channel_id"] = guildOptions.systemChannelId.value();
         if(guildOptions.systemChannelFlags.has_value()) createGuildPayload["system_channel_flags"] = guildOptions.systemChannelFlags.value();
 
-        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), "post",this->token);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), boost::beast::http::verb::post, this->token);
         return guild::getGuildData(json::parse(newGuild));
     }
 
     guild guildOptions::getGuild(const long& guildId, const bool& withCounts, const bool& cacheObject) const {
         json payload;
         payload["with_counts"] = withCounts;
-        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), "get", this->token);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), boost::beast::http::verb::get, this->token);
         if(cacheObject) {
 
         }

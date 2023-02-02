@@ -95,14 +95,14 @@ namespace helios {
         embedField embedFieldData;
         embedFieldData.name = jsonData["name"];
         embedFieldData.value = jsonData["value"];
-        if(jsonData.contains("inline")) embedFieldData.displayInline = jsonData["inline"];
+        if(jsonData.contains("inline")) embedFieldData.inline_ = jsonData["inline"];
         return embedFieldData;
     }
 
     embedField::embedField(const std::string &name, const std::string &value, const bool &displayInline) {
         this->name = name;
         this->value = value;
-        this->displayInline = displayInline;
+        this->inline_ = displayInline;
     }
 
     embed embed::getEmbedData(const nlohmann::json &jsonData) {

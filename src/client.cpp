@@ -6,7 +6,7 @@ namespace helios {
         cache::createCacheDirectory();
         token::botToken = token;
 
-        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", "", "get", token));
+        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, token));
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
@@ -287,6 +287,8 @@ namespace helios {
                 return;
             }
 
+
+
             if(executeEvent == "CHANNEL_CREATE"){
                 if(this->onEvent.channelCreateFunction) {
                     channelCreateEvent channelCreateData = shard->shardStructPtr->eventData.getChannelCreateEventData(wsResponseJson["d"]);
@@ -437,7 +439,7 @@ namespace helios {
     void client::onExit() {
 
     }
-    
+
     void client::reconnect() {
 
     }

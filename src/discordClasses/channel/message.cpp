@@ -1,5 +1,5 @@
 #include "discordClassses/channel/message.hpp"
-
+#include "discordClassses/channel/channel.hpp"
 namespace helios {
     reaction reaction::getReactionData(const nlohmann::json &jsonData) {
         reaction reactionData;
@@ -36,40 +36,50 @@ namespace helios {
 
     message message::getMessageData(const nlohmann::json &jsonData) {
         message messageData;
-        messageData.id = jsonData["id"];
-        messageData.channelId = jsonData["channel_id"];
+        messageData.id = std::stol(jsonData["id"].get<std::string>());
+        messageData.channelId = std::stol(jsonData["channel_id"].get<std::string>());
         messageData.author = user::getUserData(jsonData["author"]);
         messageData.content = jsonData["content"];
         messageData.timestamp = jsonData["timestamp"];
-        if(!jsonData.is_null()) messageData.editedTimestamp = jsonData["edited_timestamp"];
+        if(!jsonData["edited_timestamp"].is_null()) messageData.editedTimestamp = jsonData["edited_timestamp"];
         messageData.tts = jsonData["tts"];
         messageData.mentionEveryone = jsonData["mention_everyone"];
+
 
         for (const nlohmann::basic_json<>& mention: jsonData["mentions"]) {
             messageData.mentions[std::stol(mention["id"].get<std::string>())] = user::getUserData(mention);
         }
 
-        for (const nlohmann::basic_json<>& mentionRole: jsonData["mention_roles"]) {
-            //messageData.mentions[std::stol(mentionRole["id"].get<std::string>())] = role::getRoleData(mentionRole);
+        for (const nlohmann::basic_json<> &mentionRole: jsonData["mention_roles"]) {
+            messageData.mentionRoles[std::stol(mentionRole["id"].get<std::string>())] = role::getRoleData(mentionRole);
         }
 
         if(jsonData.contains("mention_channels")) {
-            for (const nlohmann::basic_json<>& mentionChannel: jsonData["mention_channels"]) {
-                messageData.mentionChannels[std::stol(mentionChannel["id"].get<std::string>())] = channelMention::getChannelMentionData(mentionChannel);
-
+            for (const nlohmann::basic_json<> &mentionChannel: jsonData["mention_channels"]) {
+                messageData.mentionChannels[std::stol(
+                        mentionChannel["id"].get<std::string>())] = channelMention::getChannelMentionData(
+                        mentionChannel);
             }
         }
 
-        for (const nlohmann::basic_json<>& attachment: jsonData["attachments"]) {
-            messageData.attachments[std::stol(attachment["id"].get<std::string>())] = attachment::getAttachmentData(attachment);
+        if(jsonData.contains("attachments")) {
+            for (const nlohmann::basic_json<> &attachment: jsonData["attachments"]) {
+                messageData.attachments[std::stol(
+                        attachment["id"].get<std::string>())] = attachment::getAttachmentData(attachment);
+            }
         }
 
-        for (const nlohmann::basic_json<>& embed: jsonData["embeds"]) {
-            messageData.embeds.emplace_back(embed::getEmbedData(embed));
+        if(jsonData.contains("embeds")) {
+            for (const nlohmann::basic_json<> &embed: jsonData["embeds"]) {
+                messageData.embeds.emplace_back(embed::getEmbedData(embed));
+            }
         }
 
-        for (const nlohmann::basic_json<>& reaction: jsonData["reactions"]) {
-            messageData.reactions[std::stol(reaction["emoji"]["id"].get<std::string>())] = reaction::getReactionData(reaction);
+        if(jsonData.contains("reactions")) {
+            for (const nlohmann::basic_json<> &reaction: jsonData["reactions"]) {
+                messageData.reactions[std::stol(
+                        reaction["emoji"]["id"].get<std::string>())] = reaction::getReactionData(reaction);
+            }
         }
 
         if(jsonData.contains("nonce")) messageData.nonce = jsonData["nonce"];
@@ -83,21 +93,30 @@ namespace helios {
         if(jsonData.contains("flags")) messageData.flags = jsonData["flags"];
         if(jsonData.contains("referenced_message") && !jsonData["referenced_message"].is_null()) messageData.referencedMessage = std::make_unique<message>(getMessageData(jsonData["referenced_message"]));
         if(jsonData.contains("interaction")) messageData.interaction = messageInteraction::getMessageInteractionData(jsonData["interaction"]);
-        if(jsonData.contains("thread")) messageData.thread = channel::getChannelData(jsonData["thread"]);
+        if(jsonData.contains("thread")) messageData.thread = std::make_unique<channel>(channel::getChannelData(jsonData["thread"]));
 
         for (const nlohmann::basic_json<>& component: jsonData["components"]) {
             //messageData.components.emplace_back(messageComponent::getMessageComponentData(component));
         }
 
-        if(jsonData.contains("sticker_items")) messageData.stickerItems = messageStickerItem::getMessageStickerItemData(jsonData["sticker_items"]);
+        if(jsonData.contains("sticker_items")) {
+            for (const nlohmann::basic_json<>& stickerItem: jsonData["sticker_items"]) {
+                messageData.stickerItems[std::stol(stickerItem["id"].get<std::string>())] = messageStickerItem::getMessageStickerItemData(stickerItem);
+            }
+        }
+
         if(jsonData.contains("stickers")) {
-            for (const nlohmann::basic_json<>& sticker: jsonData["reactions"]) {
-                //messageData.stickers[std::stol(sticker["id"].get<std::string>())] = sticker::getStickerData(sticker);
+            for (const nlohmann::basic_json<>& sticker: jsonData["stickers"]) {
+                messageData.stickers[std::stol(sticker["id"].get<std::string>())] = sticker::getStickerData(sticker);
             }
         }
 
         if(jsonData.contains("position")) messageData.position = jsonData["position"];
         if(jsonData.contains("role_subscription_data")) messageData.roleSubscriptionData = roleSubscriptionData::getRoleSubscriptionDataData(jsonData["role_subscription_data"]);
         return messageData;
+    }
+
+    message::message(const std::string &messageContent) {
+        this->content = messageContent;
     }
 } // helios

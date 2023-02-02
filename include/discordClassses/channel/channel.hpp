@@ -4,10 +4,12 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <boost/beast/core/string.hpp>
 #include <nlohmann/json.hpp>
 #include "../guild/guildMember.hpp"
 #include "../user.hpp"
-#include "../../request.hpp"
+#include "request.hpp"
+#include "message.hpp"
 #include "token.hpp"
 
 using nlohmann::json;
@@ -87,8 +89,8 @@ namespace helios {
 
     class channel {
     private:
-        friend class message;
         friend class channelOptions;
+        friend class message;
         friend class eventData;
         static channel getChannelData(const json& jsonData);
     public:
@@ -123,21 +125,30 @@ namespace helios {
         std::unordered_map<long, forumTag> availableTags;
         std::vector<long> appliedTags;
         defaultReaction defaultReactionEmoji;
-        std::optional<int> defaultThreadRateLimitPerUse;
+        std::optional<int> defaultThreadRateLimitPerUser;
         std::optional<int> defaultSortOrder;
         std::optional<int> defaultForumLayout;
 
-        [[maybe_unused]] channel modify(const channel& newChannel = helios::channel(), const int& channelType = 0, const std::string& reason = "");
-        [[maybe_unused]] channel close(const std::string& reason = "");
-        [[maybe_unused]] message getMessages(const std::vector<message>& messages);
-        [[maybe_unused]] message getMessage(const message& message);
+        [[maybe_unused]] channel modify(const channel& newChannel = helios::channel(), const std::string& reason = "");
+        [[maybe_unused]] channel delete_(const std::string& reason = "");
+        [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> getMessages(const std::vector<std::vector<std::string>>& options = {}) const;
+        [[maybe_unused]] [[nodiscard]] message getMessage(const long& messageId) const;
+        [[maybe_unused]] message createMessage(const message& newMessage = helios::message());
+        [[maybe_unused]] message crosspostMessage(const long& messageId);
+        [[maybe_unused]] void createReaction(const long& messageId, const std::string& emoji);
+        [[maybe_unused]] void deleteReaction(const long& messageId, const std::string& emoji);
+        [[maybe_unused]] void deleteUserReaction(const long& messageId, const std::string& emoji, const long& userId);
+        [[maybe_unused]] std::unordered_map<long, user> getReactions(const long& messageId, const std::string& emoji, std::vector<std::vector<std::string>>& options) const;
+        [[maybe_unused]] void deleteAllReactions(const long& messageId);
+        [[maybe_unused]] void deleteAllReactionsForEmoji(const long& messageId, const std::string& emoji);
+
 
     };
 
     class channelOptions {
     public:
         [[maybe_unused]] channel create(const channel& channelOptions);
-        [[maybe_unused]] [[nodiscard]] static channel get(const long& channelId, const bool& cacheObject = true) ;
+        [[maybe_unused]] [[nodiscard]] channel get(const long& channelId, const bool& cacheObject = true) const;
         [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
         [[maybe_unused]] bool existsInCache(const long& guildId) const;
     };

@@ -21,6 +21,7 @@ namespace helios {
     class role {
     private:
         friend class guild;
+        friend class message;
         static role getRoleData(const nlohmann::json& jsonData);
     public:
         std::optional<long> id;

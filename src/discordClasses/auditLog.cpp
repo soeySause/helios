@@ -70,7 +70,7 @@ helios::auditLogOptions::getGuildAuditLog(const long &guildId, const long &userI
     if(before != -1) queryParams["before"] = before;
     if(after != -1) queryParams["after"] = after;
     if(limit != -1) queryParams["limit"] = limit;
-    std::cout << request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId) + "/audit-logs", queryParams.dump(), "get",this->token);
-    return helios::auditLog::getAuditLog(nlohmann::json::parse(request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId) + "/audit-logs", queryParams.dump(), "get",this->token)));
+    std::cout << request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId) + "/audit-logs", queryParams.dump(), boost::beast::http::verb::get, this->token);
+    return helios::auditLog::getAuditLog(nlohmann::json::parse(request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId) + "/audit-logs", queryParams.dump(), boost::beast::http::verb::get, this->token)));
 
 }

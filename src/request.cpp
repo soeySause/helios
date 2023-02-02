@@ -10,7 +10,8 @@ using json = nlohmann::json;
 int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
-std::string request::httpsRequest(const std::string& host, const std::string& target, const std::string& payload, const std::string& method, const std::string& authorization, const std::string& reason)
+
+std::string request::httpsRequest(const std::string& host, const std::string& target, const json& payload, const http::verb& method, const std::string& authorization, const std::string& reason)
 {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
@@ -36,40 +37,49 @@ std::string request::httpsRequest(const std::string& host, const std::string& ta
     sock.handshake(ssl_socket::client);
 
     // ... read and write as normal ...
-    http::request<http::string_body> req;
-    if(method == "get") {
-        req.method(http::verb::get);
-    } else if(method == "post") {
-        req.method(http::verb::post);
-    } else if(method == "put") {
-        req.method(http::verb::put);
-    } else {
-        throw(helios::heliosException(71, "Unknown method " + method));
-    }
+    http::request<http::string_body> req{method, target, 11};
 
-    req.target(target);
-    req.version(11);
     req.set(http::field::host, host);
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    req.set(http::field::content_type, "application/json");
 
 
     if(!authorization.empty()) req.set(http::field::authorization, "Bot " + authorization);
     if(!reason.empty()) req.set("X-Audit-Log-Reason", reason);
-
-
-
+    if(method != http::verb::get) {
+        req.body() = payload.dump();
+        req.prepare_payload();
+    }
     // Send the HTTP request to the remote host
-        http::write(sock, req);
-        beast::flat_buffer buffer;
-        http::response<http::string_body> res;
-        http::read(sock, buffer, res);
+    http::write(sock, req);
+    beast::flat_buffer buffer;
+    http::response<http::string_body> res;
+    http::read(sock, buffer, res);
 
-        request::httpsResponseCode = int((unsigned int)res.result_int());
-        request::httpsResponseReason = res.body();
+    request::httpsResponseCode = int((unsigned int)res.result_int());
+    request::httpsResponseReason = res.body();
 
-        if(httpsResponseCode != 200) {
-            throw(helios::heliosException(request::httpsResponseCode, "\nEndpoint: " + target + "\nError message: " + request::httpsResponseReason));
+    if(httpsResponseCode == 204) return "";
+    if(httpsResponseCode != 200) {
+        throw (helios::heliosException(request::httpsResponseCode,
+                                       "\nError code: " + std::to_string(request::httpsResponseCode) +
+                                       "\nEndpoint: " + std::string(boost::beast::http::to_string(req.method())) + " " + target +
+                                       "\nError message: " + request::httpsResponseReason));
+    }
+
+    return res.body();
+}
+
+std::string request::url_encode(const std::string &value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+    for (char c : value) {
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
         }
-
-        return res.body();
+        escaped << '%' << std::setw(2) << int((unsigned char) c);
+    }
+    return escaped.str();
 }

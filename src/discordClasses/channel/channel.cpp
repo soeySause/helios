@@ -112,97 +112,311 @@ namespace helios {
         }
 
         if(jsonData.contains("default_reaction_emoji") && !jsonData["default_reaction_emoji"].is_null()) channelData.defaultReactionEmoji = defaultReaction::getDefaultReactionData(jsonData["default_reaction_emoji"]);
-        if(jsonData.contains("default_thread_rate_limit_per_use")) channelData.defaultThreadRateLimitPerUse = jsonData["default_thread_rate_limit_per_use"];
+        if(jsonData.contains("default_thread_rate_limit_per_use")) channelData.defaultThreadRateLimitPerUser = jsonData["default_thread_rate_limit_per_user"];
         if(jsonData.contains("default_sort_order") && !jsonData["default_sort_order"].is_null()) channelData.defaultSortOrder = jsonData["default_sort_order"];
         if(jsonData.contains("default_forum_layout")) channelData.defaultForumLayout = jsonData["default_forum_layout"];
 
         return channelData;
     }
 
-    channel channelOptions::get(const long &channelId, const bool &cacheObject) {
-        return channel::getChannelData(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), "", "get", token::botToken));
+    channel channelOptions::get(const long &channelId, const bool &cacheObject) const {
+        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, token::botToken)));
     }
 
     channel channelOptions::create(const channel &channelOptions) {
-        return channel();
+        return {};
     }
 
     channel channelOptions::getFromCache(const long &channelId) const {
-        return channel();
+        return {};
     }
 
-    [[maybe_unused]] channel channel::modify(const channel& newChannel, const int& channelType, const std::string& reason) {
+    [[maybe_unused]] channel channel::modify(const channel& newChannel, const std::string& reason) {
+        const int channelType = this->type.value();
         json modifyChannelJson;
 
-        if(channelType == 1) {
-            if(newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
-            if(newChannel.icon.has_value()) modifyChannelJson["icon"] = newChannel.icon.value();
-        }
-
-        if(channelType == 0) {
-            if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
-            if (newChannel.type.has_value()) modifyChannelJson["type"] = newChannel.type.value();
-            if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
-            if (newChannel.topic.has_value()) modifyChannelJson["topic"] = newChannel.topic.value();
-            if (newChannel.nsfw.has_value()) modifyChannelJson["nsfw"] = newChannel.nsfw.value();
-            if (newChannel.rateLimitPerUser.has_value()) modifyChannelJson["rate_limit_per_user"] = newChannel.rateLimitPerUser.value();
-            if (newChannel.bitrate.has_value()) modifyChannelJson["bitrate"] = newChannel.bitrate.value();
-            if (newChannel.userLimit.has_value()) modifyChannelJson["user_limit"] = newChannel.userLimit.value();
-
-            json permissionOverwritesJsonArray = json::array();
-            for (const auto &[key, value]: newChannel.permissionOverwrites) {
-                json permissionOverwritesJson;
-                if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
-                if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
-                if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
-                if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
-                permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+        switch (channelType) {
+            // group Dm
+            case 3: {
+                if(newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if(newChannel.icon.has_value()) modifyChannelJson["icon"] = newChannel.icon.value();
+                break;
             }
-            if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
-            if (newChannel.parentId.has_value()) modifyChannelJson["parent_id"] = newChannel.parentId.value();
-            if (newChannel.rtcRegion.has_value()) modifyChannelJson["rtc_region"] = newChannel.rtcRegion.value();
-            if (newChannel.videoQualityMode.has_value()) modifyChannelJson["video_quality_mode"] = newChannel.videoQualityMode.value();
-            if (newChannel.defaultAutoArchiveDuration.has_value()) modifyChannelJson["default_auto_archive_duration"] = newChannel.defaultAutoArchiveDuration.value();
-            if (newChannel.flags.has_value()) modifyChannelJson["flags"] = newChannel.flags.value();
-
-            json availableTagJsonArray = json::array();
-            for (const auto &[key, value]: newChannel.availableTags) {
-                json tagJson;
-                if (value.id.has_value()) tagJson["id"] = value.id.value();
-                if (value.name.has_value()) tagJson["name"] = value.name.value();
-                if (value.moderated.has_value()) tagJson["moderated"] = value.moderated.value();
-                if (value.emojiId.has_value()) tagJson["emoji_id"] = value.emojiId.value();
-                if (value.emojiName.has_value()) tagJson["emoji_name"] = value.emojiName.value();
-                availableTagJsonArray.emplace_back(tagJson);
+            // thread
+            case 11:
+            case 12: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.thread_metadata.archived.has_value()) modifyChannelJson["archived"] = newChannel.thread_metadata.archived.value();
+                if (newChannel.thread_metadata.autoArchiveDuration.has_value()) modifyChannelJson["auto_archive_duration"] = newChannel.thread_metadata.autoArchiveDuration.value();
+                if (newChannel.thread_metadata.locked.has_value()) modifyChannelJson["locked"] = newChannel.thread_metadata.locked.value();
+                if (newChannel.thread_metadata.invitable.has_value()) modifyChannelJson["invitable"] = newChannel.thread_metadata.invitable.value();
+                if (newChannel.rateLimitPerUser.has_value()) modifyChannelJson["rate_limit_per_user"] = newChannel.rateLimitPerUser.value();
+                if (newChannel.flags.has_value()) modifyChannelJson["flags"] = newChannel.flags.value();
+                json appliedTagJsonArray = json::array();
+                for (const auto &tag: newChannel.appliedTags) {
+                    appliedTagJsonArray.emplace_back(tag);
+                }
+                if (!appliedTagJsonArray.empty()) modifyChannelJson["applied_tags"] = appliedTagJsonArray;
+                break;
             }
-            if (!availableTagJsonArray.empty()) modifyChannelJson["available_tags"] = availableTagJsonArray;
-            if (newChannel.defaultReactionEmoji.emojiId.has_value()) modifyChannelJson["default_reaction_emoji"]["emoji_id"] = newChannel.defaultReactionEmoji.emojiId.value();
-            if (newChannel.defaultReactionEmoji.emojiName.has_value()) modifyChannelJson["default_reaction_emoji"]["emoji_name"] = newChannel.defaultReactionEmoji.emojiName.value();
-
-            if (newChannel.defaultThreadRateLimitPerUse.has_value()) modifyChannelJson["defaultThreadRateLimitPerUse"] = newChannel.defaultSortOrder.value();
-            if (newChannel.defaultSortOrder.has_value()) modifyChannelJson["default_sort_order"] = newChannel.defaultSortOrder.value();
-            if (newChannel.defaultForumLayout.has_value()) modifyChannelJson["default_forum_layout"] = newChannel.defaultForumLayout.value();
-        }
-
-        if(channelType == 11 || channelType == 12) {
-            if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
-            if (newChannel.thread_metadata.archived.has_value()) modifyChannelJson["archived"] = newChannel.thread_metadata.archived.value();
-            if (newChannel.thread_metadata.autoArchiveDuration.has_value()) modifyChannelJson["auto_archive_duration"] = newChannel.thread_metadata.autoArchiveDuration.value();
-            if (newChannel.thread_metadata.locked.has_value()) modifyChannelJson["locked"] = newChannel.thread_metadata.locked.value();
-            if (newChannel.thread_metadata.invitable.has_value()) modifyChannelJson["invitable"] = newChannel.thread_metadata.invitable.value();
-            if (newChannel.rateLimitPerUser.has_value()) modifyChannelJson["rate_limit_per_user"] = newChannel.rateLimitPerUser.value();
-            if (newChannel.flags.has_value()) modifyChannelJson["flags"] = newChannel.flags.value();
-            json appliedTagJsonArray = json::array();
-            for (const auto &tag: newChannel.appliedTags) {
-                appliedTagJsonArray.emplace_back(tag);
+            // voice
+            case 2: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                if (newChannel.nsfw.has_value()) modifyChannelJson["nsfw"] = newChannel.nsfw.value();
+                if (newChannel.bitrate.has_value()) modifyChannelJson["bitrate"] = newChannel.bitrate.value();
+                if (newChannel.userLimit.has_value()) modifyChannelJson["user_limit"] = newChannel.userLimit.value();
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.parentId.has_value()) modifyChannelJson["parent_id"] = newChannel.parentId.value();
+                if (newChannel.rtcRegion.has_value()) modifyChannelJson["rtc_region"] = newChannel.rtcRegion.value();
+                if (newChannel.videoQualityMode.has_value()) modifyChannelJson["video_quality_mode"] = newChannel.videoQualityMode.value();
+                break;
             }
-            if (!appliedTagJsonArray.empty()) modifyChannelJson["applied_tags"] = appliedTagJsonArray;
-        }
 
-        return channel::getChannelData(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), modifyChannelJson.dump(), "patch", token::botToken, reason));
+            //stage voice
+            case 13: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                if (newChannel.bitrate.has_value()) modifyChannelJson["bitrate"] = newChannel.bitrate.value();
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.rtcRegion.has_value()) modifyChannelJson["rtc_region"] = newChannel.rtcRegion.value();
+                break;
+            }
+            // announcement
+            case 5: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.type.has_value()) modifyChannelJson["type"] = newChannel.type.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                if (newChannel.topic.has_value()) modifyChannelJson["topic"] = newChannel.topic.value();
+                if (newChannel.nsfw.has_value()) modifyChannelJson["nsfw"] = newChannel.nsfw.value();
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.parentId.has_value()) modifyChannelJson["parent_id"] = newChannel.parentId.value();
+                if (newChannel.defaultAutoArchiveDuration.has_value()) modifyChannelJson["default_auto_archive_duration"] = newChannel.defaultAutoArchiveDuration.value();
+                break;
+            }
+            // text channel
+            case 0: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.type.has_value()) modifyChannelJson["type"] = newChannel.type.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                if (newChannel.topic.has_value()) modifyChannelJson["topic"] = newChannel.topic.value();
+                if (newChannel.nsfw.has_value()) modifyChannelJson["nsfw"] = newChannel.nsfw.value();
+                if (newChannel.rateLimitPerUser.has_value()) modifyChannelJson["rate_limit_per_user"] = newChannel.rateLimitPerUser.value();
+
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.parentId.has_value()) modifyChannelJson["parent_id"] = newChannel.parentId.value();
+                if (newChannel.defaultAutoArchiveDuration.has_value()) modifyChannelJson["default_auto_archive_duration"] = newChannel.defaultAutoArchiveDuration.value();
+                if (newChannel.defaultThreadRateLimitPerUser.has_value()) modifyChannelJson["default_thread_rate_limit_per_user"] = newChannel.defaultSortOrder.value();
+            }
+            // forum
+            case 15: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.defaultAutoArchiveDuration.has_value()) modifyChannelJson["default_auto_archive_duration"] = newChannel.defaultAutoArchiveDuration.value();
+                if (newChannel.flags.has_value()) modifyChannelJson["flags"] = newChannel.flags.value();
+
+                json availableTagJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.availableTags) {
+                    json tagJson;
+                    if (value.id.has_value()) tagJson["id"] = value.id.value();
+                    if (value.name.has_value()) tagJson["name"] = value.name.value();
+                    if (value.moderated.has_value()) tagJson["moderated"] = value.moderated.value();
+                    if (value.emojiId.has_value()) tagJson["emoji_id"] = value.emojiId.value();
+                    if (value.emojiName.has_value()) tagJson["emoji_name"] = value.emojiName.value();
+                    availableTagJsonArray.emplace_back(tagJson);
+                }
+                if (!availableTagJsonArray.empty()) modifyChannelJson["available_tags"] = availableTagJsonArray;
+                if (newChannel.defaultReactionEmoji.emojiId.has_value()) modifyChannelJson["default_reaction_emoji"]["emoji_id"] = newChannel.defaultReactionEmoji.emojiId.value();
+                if (newChannel.defaultReactionEmoji.emojiName.has_value()) modifyChannelJson["default_reaction_emoji"]["emoji_name"] = newChannel.defaultReactionEmoji.emojiName.value();
+
+                if (newChannel.defaultThreadRateLimitPerUser.has_value()) modifyChannelJson["default_thread_rate_limit_per_user"] = newChannel.defaultSortOrder.value();
+                if (newChannel.defaultSortOrder.has_value()) modifyChannelJson["default_sort_order"] = newChannel.defaultSortOrder.value();
+                if (newChannel.defaultForumLayout.has_value()) modifyChannelJson["default_forum_layout"] = newChannel.defaultForumLayout.value();
+
+            }
+            // default fields
+            default: {
+                if (newChannel.name.has_value()) modifyChannelJson["name"] = newChannel.name.value();
+                if (newChannel.position.has_value()) modifyChannelJson["position"] = newChannel.position.value();
+                if (newChannel.topic.has_value()) modifyChannelJson["topic"] = newChannel.topic.value();
+                if (newChannel.nsfw.has_value()) modifyChannelJson["nsfw"] = newChannel.nsfw.value();
+                if (newChannel.rateLimitPerUser.has_value()) modifyChannelJson["rate_limit_per_user"] = newChannel.rateLimitPerUser.value();
+                json permissionOverwritesJsonArray = json::array();
+                for (const auto &[key, value]: newChannel.permissionOverwrites) {
+                    json permissionOverwritesJson;
+                    if (value.id.has_value()) permissionOverwritesJson["id"] = value.id.value();
+                    if (value.type.has_value()) permissionOverwritesJson["type"] = value.type.value();
+                    if (value.allow.has_value()) permissionOverwritesJson["allow"] = value.allow.value();
+                    if (value.deny.has_value()) permissionOverwritesJson["deny"] = value.deny.value();
+                    permissionOverwritesJsonArray.emplace_back(permissionOverwritesJson);
+                }
+                if (!permissionOverwritesJsonArray.empty()) modifyChannelJson["permission_overwrites"] = permissionOverwritesJsonArray;
+                if (newChannel.parentId.has_value()) modifyChannelJson["parent_id"] = newChannel.parentId.value();
+
+                break;
+            }
+        }
+        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), modifyChannelJson, boost::beast::http::verb::patch, token::botToken, reason)));
     }
-    [[maybe_unused]] channel channel::close(const std::string &reason) {
-        return channel::getChannelData(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), "", "delete", token::botToken, reason));
+    [[maybe_unused]] channel channel::delete_(const std::string &reason) {
+        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), {}, boost::beast::http::verb::delete_, token::botToken, reason)));
+    }
+    [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> channel::getMessages(const std::vector<std::vector<std::string>>& options) const {
+        json payload;
+        for(auto& option : options) {
+            if(option.at(0) == "limit") {
+                payload["limit"] = std::stoi(option.at(1));
+            }
+            if(option.at(0) == "around") {
+                payload["around"] = std::stol(option.at(1));
+                break;
+            }
+            if(option.at(0) == "before") {
+                payload["before"] = std::stol(option.at(1));
+                break;
+            }
+            if(option.at(0) == "after") {
+                payload["after"] = std::stol(option.at(1));
+                break;
+            }
+        }
+        std::unordered_map<long, message> messages;
+        for (const nlohmann::basic_json<>& message: json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::get, token::botToken))) {
+            messages[std::stol(message["id"].get<std::string>())] = message::getMessageData(message);
+        }
+        return messages;
+    }
+    [[maybe_unused]] [[nodiscard]] message channel::getMessage(const long &messageId) const {
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, token::botToken)));
+
+    }
+    [[maybe_unused]] message channel::createMessage(const message &newMessage) {
+        json payload;
+        if(newMessage.content.has_value()) payload["content"] = newMessage.content.value();
+        if(newMessage.nonce.has_value()) payload["nonce"] = newMessage.nonce.value();
+        if(newMessage.tts.has_value()) payload["tts"] = newMessage.tts.value();
+        for(auto& embed: newMessage.embeds) {
+            if (embed.title.has_value()) payload["embed"]["title"] = embed.title.value();
+            if (embed.type.has_value()) payload["embed"]["type"] = embed.type.value();
+            if (embed.description.has_value()) payload["embed"]["description"] = embed.description.value();
+            if (embed.url.has_value()) payload["embed"]["url"] = embed.url.value();
+            if (embed.timestamp.has_value()) payload["embed"]["timestamp"] = embed.timestamp.value();
+            if (embed.color.has_value()) payload["embed"]["color"] = embed.color.value();
+
+            if (embed.footer.proxyIconUrl.has_value()) payload["embed"]["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+            if (embed.footer.iconUrl.has_value()) payload["embed"]["footer"]["icon_url"] = embed.footer.iconUrl.value();
+            if (embed.footer.text.has_value()) payload["embed"]["footer"]["text"] = embed.footer.text.value();
+
+            if (embed.image.url.has_value()) payload["embed"]["image"]["url"] = embed.image.url.value();
+            if (embed.image.proxyUrl.has_value()) payload["embed"]["image"]["proxy_url"] = embed.image.proxyUrl.value();
+            if (embed.image.height.has_value()) payload["embed"]["image"]["height"] = embed.image.height.value();
+            if (embed.image.width.has_value()) payload["embed"]["image"]["width"] = embed.image.width.value();
+
+            if (embed.thumbnail.url.has_value()) payload["embed"]["thumbnail"]["url"] = embed.thumbnail.url.value();
+            if (embed.thumbnail.proxyUrl.has_value()) payload["embed"]["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+            if (embed.thumbnail.height.has_value()) payload["embed"]["thumbnail"]["height"] = embed.thumbnail.height.value();
+            if (embed.thumbnail.width.has_value()) payload["embed"]["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+            if (embed.video.url.has_value()) payload["embed"]["video"]["url"] = embed.video.url.value();
+            if (embed.video.proxyUrl.has_value()) payload["embed"]["video"]["proxy_url"] = embed.video.proxyUrl.value();
+            if (embed.video.height.has_value()) payload["embed"]["video"]["height"] = embed.video.height.value();
+            if (embed.video.width.has_value()) payload["embed"]["video"]["width"] = embed.video.width.value();
+
+            if (embed.provider.name.has_value()) payload["embed"]["provider"]["name"] = embed.provider.name.value();
+            if (embed.provider.url.has_value()) payload["embed"]["provider"]["url"] = embed.provider.url.value();
+
+            if (embed.author.url.has_value()) payload["embed"]["author"]["url"] = embed.author.url.value();
+            if (embed.author.name.has_value()) payload["embed"]["author"]["name"] = embed.author.name.value();
+            if (embed.author.iconUrl.has_value()) payload["embed"]["author"]["icon_url"] = embed.author.iconUrl.value();
+            if (embed.author.proxyIconUrl.has_value()) payload["embed"]["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+            json fields = json::array();
+            for (auto &field: embed.fields) {
+                json jsonField;
+                if (field.name.has_value()) jsonField["name"] = field.name.value();
+                if (field.value.has_value()) jsonField["value"] = field.value.value();
+                if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+                fields.emplace_back(jsonField);
+            }
+            if (!fields.empty()) payload["embed"]["fields"] = fields;
+        }
+        if(newMessage.messageReference.guildId.has_value()) payload["message_reference"]["guild_id"] = newMessage.messageReference.guildId.value();
+        if(newMessage.messageReference.messageId.has_value()) payload["message_reference"]["message_id"] = newMessage.messageReference.messageId.value();
+        if(newMessage.messageReference.channelId.has_value()) payload["message_reference"]["channel_id"] = newMessage.messageReference.channelId.value();
+        if(newMessage.messageReference.failIfNotExists.has_value()) payload["message_reference"]["fail_if_not_exists"] = newMessage.messageReference.failIfNotExists.value();
+
+        //TODO message components
+
+        
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, token::botToken)));
+    }
+
+    [[maybe_unused]] message channel::crosspostMessage(const long &messageId) {
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/crosspost", {}, boost::beast::http::verb::post, token::botToken)));
+    }
+    [[maybe_unused]] void channel::createReaction(const long &messageId, const std::string& emoji) {
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::put, token::botToken);
+    }
+    [[maybe_unused]] void channel::deleteReaction(const long &messageId, const std::string &emoji) {
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::delete_, token::botToken);
+    }
+    [[maybe_unused]] void channel::deleteUserReaction(const long &messageId, const std::string &emoji, const long& userId) {
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/" + std::to_string(userId), {}, boost::beast::http::verb::delete_, token::botToken);
+    }
+    [[maybe_unused]] [[nodiscard]] std::unordered_map<long, user> channel::getReactions(const long &messageId, const std::string &emoji, std::vector<std::vector<std::string>> &options) const {
+
+    }
+    [[maybe_unused]] void channel::deleteAllReactions(const long &messageId) {
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions", {}, boost::beast::http::verb::delete_, token::botToken);
+    }
+    [[maybe_unused]] void channel::deleteAllReactionsForEmoji(const long &messageId, const std::string &emoji) {
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji), {}, boost::beast::http::verb::delete_, token::botToken);
     }
 
 } // helios

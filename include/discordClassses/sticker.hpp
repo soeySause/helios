@@ -11,6 +11,7 @@ namespace helios {
     class sticker {
     private:
         friend class guild;
+        friend class message;
         static sticker getStickerData(const nlohmann::json& jsonData);
     public:
         std::optional<long> id;

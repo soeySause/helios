@@ -15,10 +15,10 @@
 #include "../interactions/interaction.hpp"
 #include "embed.hpp"
 #include "attachment.hpp"
-#include "channel.hpp"
 
 namespace helios {
     class channel;
+    class channelMention;
     class reaction {
     private:
         friend class message;
@@ -62,8 +62,14 @@ namespace helios {
 
     class message {
     private:
+        friend class channel;
         static message getMessageData(const nlohmann::json& jsonData);
     public:
+        message() = default;
+        message(const std::string& content);
+        message(const embed& embed);
+        message(const std::vector<long> stickerIds);
+        message(const messageComponent& messageComponent);
         std::optional<long> id;
         std::optional<long> channelId;
         user author;
@@ -89,9 +95,9 @@ namespace helios {
         std::optional<int> flags;
         std::unique_ptr<message> referencedMessage;
         messageInteraction interaction;
-        channel thread;
+        std::unique_ptr<channel> thread;
         std::vector<messageComponent> components;
-        messageStickerItem stickerItems;
+        std::unordered_map<long, messageStickerItem> stickerItems;
         std::unordered_map<long, sticker> stickers;
         std::optional<int> position;
         roleSubscriptionData roleSubscriptionData;

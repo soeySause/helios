@@ -89,7 +89,7 @@ namespace helios {
         embedField() = default;
         std::optional<std::string> name;
         std::optional<std::string>value;
-        std::optional<bool> displayInline;
+        std::optional<bool> inline_;
     };
 
     class embed {

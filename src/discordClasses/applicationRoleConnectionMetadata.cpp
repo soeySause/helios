@@ -16,23 +16,23 @@ helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataR
 helios::applicationRoleConnectionMetadata
 helios::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(const long &applicationId) {
     return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", "get", token::botToken)));
+    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::get, token::botToken)));
 }
 
 helios::applicationRoleConnectionMetadata
 helios::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(const std::string &applicationId) {
     return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + applicationId + "/role-connections/metadata", "", "get",token::botToken)));
+    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + applicationId + "/role-connections/metadata", "", boost::beast::http::verb::get, token::botToken)));
 }
 
 helios::applicationRoleConnectionMetadata
 helios::applicationRoleConnectionMetadataOptions::updateApplicationRoleConnectionMetadataRecords(const long &applicationId) {
     return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", "put",token::botToken)));
+    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::put, token::botToken)));
 }
 
 helios::applicationRoleConnectionMetadata
 helios::applicationRoleConnectionMetadataOptions::updateApplicationRoleConnectionMetadataRecords(const std::string &applicationId) {
     return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + applicationId + "/role-connections/metadata", "", "put", token::botToken)));
+    (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + applicationId + "/role-connections/metadata", "", boost::beast::http::verb::put, token::botToken)));
 }
