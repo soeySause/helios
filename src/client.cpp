@@ -1,10 +1,12 @@
 #include "client.hpp"
 
 namespace helios {
-    std::string token::botToken;
     client::client(const std::string& token) {
         cache::createCacheDirectory();
-        token::botToken = token;
+        this->botToken = token;
+        this->applicationRoleConnectionMetadata.client = this;
+        this->channels.client = this;
+        this->guilds.client = this;
 
         const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, token));
         this->shards = getGateway["shards"];
@@ -153,7 +155,9 @@ namespace helios {
         this->shardCreationTime.insert(this->shardCreationTime.begin(), std::chrono::system_clock::now());
         newWsShard = std::make_unique<std::thread>(&client::wsShard, this, this->host, shard);
         shard->shardStructPtr->shardThread.swap(newWsShard);
+
         shard->shardStructPtr->shardThreadId = shard->shardStructPtr->shardThread->get_id();
+        this->threadMap[shard->shardStructPtr->shardThreadId] = shard->shardStructPtr->shardId;
     }
 
     void client::wsShard(const std::string &connectedHost, const std::shared_ptr<shard>& shard) {
@@ -168,7 +172,7 @@ namespace helios {
         if(shard->shardStructPtr->reconnect) {
             json reconnectingPayload;
             reconnectingPayload["op"] = 6;
-            reconnectingPayload["d"]["token"] = token::botToken;
+            reconnectingPayload["d"]["token"] = this->botToken;
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
             reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
             sessionShard->asyncQueue(reconnectingPayload.dump());
@@ -399,7 +403,7 @@ namespace helios {
     json client::getIdentifyPayload(const int& shard) {
         json identifyPayload;
         identifyPayload["op"] = 2;
-        identifyPayload["d"]["token"] = token::botToken;
+        identifyPayload["d"]["token"] = this->botToken;
 
         identifyPayload["d"]["properties"]["os"] = this->properties.os;
         identifyPayload["d"]["properties"]["browser"] = this->properties.browser;
@@ -434,10 +438,6 @@ namespace helios {
         identifyPayload["d"]["intents"] = this->intents;
 
         return identifyPayload;
-    }
-
-    void client::onExit() {
-
     }
 
     void client::reconnect() {
@@ -482,6 +482,102 @@ namespace helios {
 
     [[maybe_unused]] void client::setLargeThreshold(const int userInputThreshold) {
         this->large_threshold = userInputThreshold;
+    }
+    applicationRoleConnectionMetadata
+    client::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(
+            const long &applicationId) {
+        return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
+                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::get, client->botToken)));
+
+    }
+
+    applicationRoleConnectionMetadata
+    client::applicationRoleConnectionMetadataOptions::updateApplicationRoleConnectionMetadataRecords(
+            const long &applicationId) {
+        return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
+                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::put, client->botToken)));
+    }
+
+    channel client::channelOptions::get(const long &channelId, const bool &cacheObject) const {
+        channel reqChannel = channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, client->botToken)));
+        reqChannel.botToken = client->botToken;
+        reqChannel.shard = client->threadMap[std::this_thread::get_id()];
+        return reqChannel;
+    }
+
+
+    guild client::guildOptions::createGuild(const helios::guild &guildOptions, const std::vector<role> &roles, const std::vector<channel> &channels) {
+        json createGuildPayload;
+        if(guildOptions.name.has_value()) createGuildPayload["name"] = guildOptions.name.value();
+        if(guildOptions.icon.has_value()) createGuildPayload["icon"] = guildOptions.icon.value();
+        if(guildOptions.verification_level.has_value()) createGuildPayload["verification_level"] = guildOptions.verification_level.value();
+        if(guildOptions.defaultMessageNotifications.has_value()) createGuildPayload["default_message_notifications"] = guildOptions.defaultMessageNotifications.value();
+        if(guildOptions.explicitContentFilter.has_value()) createGuildPayload["explicit_content_filter"] = guildOptions.explicitContentFilter.value();
+
+        json createGuildRoles = json::array();
+        for(auto& role : roles) {
+            json roleJson;
+            if(role.name.has_value()) roleJson["name"] = role.name.value();
+            if(role.permissions.has_value()) roleJson["permissions"] = role.permissions.value();
+            if(role.color.has_value()) roleJson["color"] = role.color.value();
+            if(role.hoist.has_value()) roleJson["hoist"] = role.hoist.value();
+            if(role.icon.has_value()) roleJson["icon"] = role.icon.value();
+            if(role.unicodeEmoji.has_value()) roleJson["unicode_emoji"] = role.unicodeEmoji.value();
+            if(role.mentionable.has_value()) roleJson["mentionable"] = role.mentionable.value();
+            createGuildRoles.emplace_back(roleJson);
+        }
+        if(!createGuildRoles.empty()) createGuildPayload["roles"] = createGuildRoles;
+
+        json createGuildChannel = json::array();
+        for(auto& channel : channels) {
+            json channelJson;
+            if(channel.name.has_value()) channelJson["name"] = channel.name.value();
+            if(channel.type.has_value()) channelJson["type"] = channel.type.value();
+            if(channel.topic.has_value()) channelJson["topic"] = channel.topic.value();
+            if(channel.bitrate.has_value()) channelJson["bitrate"] = channel.bitrate.value();
+            if(channel.userLimit.has_value()) channelJson["user_limit"] = channel.userLimit.value();
+            if(channel.rateLimitPerUser.has_value()) channelJson["rate_limit_per_user"] = channel.rateLimitPerUser.value();
+            if(channel.position.has_value()) channelJson["position"] = channel.position.value();
+            if(!channel.permissionOverwrites.empty()) {
+
+            }
+            if(channel.parentId.has_value()) channelJson["parent_id"] = channel.parentId.value();
+            if(channel.nsfw.has_value()) channelJson["nsfw"] = channel.nsfw.value();
+            if(channel.rtcRegion.has_value()) channelJson["rtc_region"] = channel.rtcRegion.value();
+            if(channel.videoQualityMode.has_value()) channelJson["video_quality_mode"] = channel.videoQualityMode.value();
+            if(channel.defaultAutoArchiveDuration.has_value()) channelJson["default_auto_archive_duration"] = channel.defaultAutoArchiveDuration.value();
+            if(channel.defaultReactionEmoji.emojiId.has_value()) {
+                channelJson["default_reaction_emoji"]["emoji_id"] = channel.defaultReactionEmoji.emojiId.value();
+            }
+            if(channel.defaultReactionEmoji.emojiName.has_value()) {
+                channelJson["default_reaction_emoji"]["emoji_name"] = channel.defaultReactionEmoji.emojiName.value();
+            }
+
+            if(!channel.availableTags.empty()) {
+
+            }
+
+            if(channel.defaultSortOrder.has_value()) channelJson["default_sort_order"] = channel.defaultSortOrder.value();
+            createGuildChannel.emplace_back(channelJson);
+        }
+
+        if(guildOptions.afkChannelId.has_value()) createGuildPayload["afk_channel_id"] = guildOptions.afkChannelId.value();
+        if(guildOptions.afkTimeout.has_value()) createGuildPayload["afk_timeout"] = guildOptions.afkTimeout.value();
+        if(guildOptions.systemChannelId.has_value()) createGuildPayload["system_channel_id"] = guildOptions.systemChannelId.value();
+        if(guildOptions.systemChannelFlags.has_value()) createGuildPayload["system_channel_flags"] = guildOptions.systemChannelFlags.value();
+
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), boost::beast::http::verb::post, client->botToken);
+        return guild::getGuildData(json::parse(newGuild));
+    }
+
+    guild client::guildOptions::getGuild(const long& guildId, const bool& withCounts, const bool& cacheObject) const {
+        json payload;
+        payload["with_counts"] = withCounts;
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), boost::beast::http::verb::get, client->botToken);
+        if(cacheObject) {
+
+        }
+        return guild::getGuildData(json::parse(newGuild));
     }
 } // helios
 

@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "role.hpp"
+#include "../auditLog.hpp"
 #include "../emoji.hpp"
 #include "../voice.hpp"
 #include "../sticker.hpp"
@@ -119,7 +120,7 @@ namespace helios{
 
     class guild {
     private:
-        friend class guildOptions;
+        friend class client;
         friend class eventData;
         friend class boost::serialization::access;
         template <typename Archive>
@@ -268,19 +269,14 @@ namespace helios{
         void modifyCurrentUserVoiceState(const voiceState& voiceStateOptions);
         void modifyUserVoiceState(const long& userId,const voiceState& voiceStateOptions);
         void modifyUserVoiceState(const std::string& userId,const voiceState& voiceStateOptions);
-    };
 
-    class guildOptions {
-    private:
-        friend class client;
-        std::string token;
-        std::unordered_map<long, guild> guilds;
-    public:
-        [[maybe_unused]] guild createGuild(const guild& guildOptions, const std::vector<role>& roles = {}, const std::vector<channel>& channels = {});
-        [[maybe_unused]] [[nodiscard]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
-        guild getGuildFromCache(const long& guildId) const;
-        bool guildExistsInCache(const long& guildId) const;
-        guildPreview getGuildPreview(const long& guildId) const;
+        class auditLogOptions {
+        public:
+            auditLog getGuildAuditLog(std::vector<std::vector<std::string>> = {});
+        };
+
+        auditLogOptions auditLog;
+
     };
 }
 

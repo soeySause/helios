@@ -19,21 +19,6 @@ using json = nlohmann::json;
 using namespace boost::archive;
 
 namespace helios {
-    class guildCacheObject {
-        guild guild;
-        std::optional<std::string> joinedAt;
-        std::optional<bool> large;
-        std::optional<bool> unavailable;
-        std::optional<int> memberCount;
-        std::unordered_map<long, voiceState> voiceStates;
-        std::unordered_map<long, guildMember> members;
-        std::unordered_map<long, channel> channels;
-        std::unordered_map<long, channel> threads;
-        std::unordered_map<long, presenceUpdate> presences;
-        std::unordered_map<long, stageInstance> stageInstances;
-        std::unordered_map<long, guildScheduledEvent> guildScheduledEvents;
-    };
-
     class readyEvent {
     public:
         user me;

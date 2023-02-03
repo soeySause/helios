@@ -72,12 +72,5 @@ namespace helios {
         std::unordered_map<long, user> users;
         //webhook webhooks;
     };
-
-    class auditLogOptions {
-        friend class client;
-        std::string token;
-    public:
-        auditLog getGuildAuditLog(const long& guildId, const long& userId = -1, const int& actionType = -1, const long& before = -1, const long& after = -1, const int& limit = -1);
-    };
 }
 #endif //HELIOS_AUDITLOG_HPP

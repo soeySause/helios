@@ -60,7 +60,7 @@ helios::auditLog helios::auditLog::getAuditLog(const nlohmann::json &guildData) 
     //auditLogData.webhooks;
     return auditLogData;
 }
-
+/*
 helios::auditLog
 helios::auditLogOptions::getGuildAuditLog(const long &guildId, const long &userId, const int &actionType,
                                           const long &before, const long &after, const int &limit) {
@@ -74,3 +74,4 @@ helios::auditLogOptions::getGuildAuditLog(const long &guildId, const long &userI
     return helios::auditLog::getAuditLog(nlohmann::json::parse(request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId) + "/audit-logs", queryParams.dump(), boost::beast::http::verb::get, this->token)));
 
 }
+*/

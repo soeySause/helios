@@ -10,7 +10,6 @@
 #include "../user.hpp"
 #include "request.hpp"
 #include "message.hpp"
-#include "token.hpp"
 
 using nlohmann::json;
 namespace helios {
@@ -89,9 +88,12 @@ namespace helios {
 
     class channel {
     private:
-        friend class channelOptions;
+        friend class client;
         friend class message;
         friend class eventData;
+
+        std::optional<std::string> botToken;
+        std::optional<int> shard;
         static channel getChannelData(const json& jsonData);
     public:
         std::optional<long> id;
@@ -141,18 +143,7 @@ namespace helios {
         [[maybe_unused]] std::unordered_map<long, user> getReactions(const long& messageId, const std::string& emoji, std::vector<std::vector<std::string>>& options) const;
         [[maybe_unused]] void deleteAllReactions(const long& messageId);
         [[maybe_unused]] void deleteAllReactionsForEmoji(const long& messageId, const std::string& emoji);
-
-
     };
-
-    class channelOptions {
-    public:
-        [[maybe_unused]] channel create(const channel& channelOptions);
-        [[maybe_unused]] [[nodiscard]] channel get(const long& channelId, const bool& cacheObject = true) const;
-        [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
-        [[maybe_unused]] bool existsInCache(const long& guildId) const;
-    };
-
 } // helios
 
 #endif //HELIOS_CHANNEL_HPP

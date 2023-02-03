@@ -119,19 +119,12 @@ namespace helios {
         return channelData;
     }
 
-    channel channelOptions::get(const long &channelId, const bool &cacheObject) const {
-        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, token::botToken)));
-    }
-
-    channel channelOptions::create(const channel &channelOptions) {
-        return {};
-    }
-
-    channel channelOptions::getFromCache(const long &channelId) const {
-        return {};
-    }
 
     [[maybe_unused]] channel channel::modify(const channel& newChannel, const std::string& reason) {
+        assert(this->id.has_value());
+        assert(this->type.has_value());
+        assert(this->botToken.has_value());
+
         const int channelType = this->type.value();
         json modifyChannelJson;
 
@@ -302,12 +295,18 @@ namespace helios {
                 break;
             }
         }
-        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), modifyChannelJson, boost::beast::http::verb::patch, token::botToken, reason)));
+        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), modifyChannelJson, boost::beast::http::verb::patch, this->botToken.value(), reason)));
     }
     [[maybe_unused]] channel channel::delete_(const std::string &reason) {
-        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), {}, boost::beast::http::verb::delete_, token::botToken, reason)));
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), {}, boost::beast::http::verb::delete_, this->botToken.value(), reason)));
     }
     [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> channel::getMessages(const std::vector<std::vector<std::string>>& options) const {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
         json payload;
         for(auto& option : options) {
             if(option.at(0) == "limit") {
@@ -327,16 +326,22 @@ namespace helios {
             }
         }
         std::unordered_map<long, message> messages;
-        for (const nlohmann::basic_json<>& message: json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::get, token::botToken))) {
+        for (const nlohmann::basic_json<>& message: json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::get, this->botToken.value()))) {
             messages[std::stol(message["id"].get<std::string>())] = message::getMessageData(message);
         }
         return messages;
     }
     [[maybe_unused]] [[nodiscard]] message channel::getMessage(const long &messageId) const {
-        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, token::botToken)));
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, this->botToken.value())));
 
     }
     [[maybe_unused]] message channel::createMessage(const message &newMessage) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
         json payload;
         if(newMessage.content.has_value()) payload["content"] = newMessage.content.value();
         if(newMessage.nonce.has_value()) payload["nonce"] = newMessage.nonce.value();
@@ -391,32 +396,50 @@ namespace helios {
         if(newMessage.messageReference.channelId.has_value()) payload["message_reference"]["channel_id"] = newMessage.messageReference.channelId.value();
         if(newMessage.messageReference.failIfNotExists.has_value()) payload["message_reference"]["fail_if_not_exists"] = newMessage.messageReference.failIfNotExists.value();
 
-        //TODO message components
+        //TODO finish this
 
-        
-        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, token::botToken)));
+
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
     }
-
     [[maybe_unused]] message channel::crosspostMessage(const long &messageId) {
-        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/crosspost", {}, boost::beast::http::verb::post, token::botToken)));
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/crosspost", {}, boost::beast::http::verb::post, this->botToken.value())));
     }
     [[maybe_unused]] void channel::createReaction(const long &messageId, const std::string& emoji) {
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::put, token::botToken);
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::put, this->botToken.value());
     }
     [[maybe_unused]] void channel::deleteReaction(const long &messageId, const std::string &emoji) {
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::delete_, token::botToken);
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
     [[maybe_unused]] void channel::deleteUserReaction(const long &messageId, const std::string &emoji, const long& userId) {
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/" + std::to_string(userId), {}, boost::beast::http::verb::delete_, token::botToken);
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/" + std::to_string(userId), {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
     [[maybe_unused]] [[nodiscard]] std::unordered_map<long, user> channel::getReactions(const long &messageId, const std::string &emoji, std::vector<std::vector<std::string>> &options) const {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
 
     }
     [[maybe_unused]] void channel::deleteAllReactions(const long &messageId) {
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions", {}, boost::beast::http::verb::delete_, token::botToken);
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions", {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
     [[maybe_unused]] void channel::deleteAllReactionsForEmoji(const long &messageId, const std::string &emoji) {
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji), {}, boost::beast::http::verb::delete_, token::botToken);
-    }
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
 
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji), {}, boost::beast::http::verb::delete_, this->botToken.value());
+    }
 } // helios
