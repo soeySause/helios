@@ -10,13 +10,15 @@
 #include <memory>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/ssl.hpp>
-#include <boost/serialization/serialization.hpp>
 #include <boost/asio.hpp>
+#include <boost/process.hpp>
+#include <openssl/evp.h>
 #include <nlohmann/json.hpp>
 
 #include "ssl/root_certification.hpp"
 #include "session.hpp"
 #include "event.hpp"
+#include "cache.hpp"
 #include "request.hpp"
 #include "discordClassses/discordClasses.hpp"
 #include "heliosException.hpp"
@@ -107,16 +109,15 @@ namespace helios {
 
     class client {
     private:
-        std::string token;
         std::string host;
-
+        std::string botToken;
         int maxConcurrency;
-        std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
 
         bool compress = false;
         int large_threshold = 50;
-        int intents = 7;
+        int intents = 2097151;
 
+        std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
         std::condition_variable updateCondition;
         std::mutex mutex;
 
@@ -134,6 +135,7 @@ namespace helios {
 
         ssl::context sslContext{ssl::context::tlsv12_client};
         std::vector<std::shared_ptr<shard>> shardClass;
+        std::unordered_map<std::thread::id, int> threadMap;
         void createWsShard(const std::shared_ptr<shard>& shard);
         void reconnectShard(const std::shared_ptr<shard>& shard);
         void fullReconnectShard(const std::shared_ptr<shard>& shard);
@@ -141,10 +143,42 @@ namespace helios {
 
     public:
         explicit client(const std::string& token);
-        guildOptions guilds;
-        channelOptions channels;
-        applicationRoleConnectionMetadataOptions applicationRoleConnectionMetadata;
-        auditLogOptions auditLog;
+
+        class applicationRoleConnectionMetadataOptions {
+        private:
+            friend class client;
+            client *client;
+        public:
+            [[maybe_unused]] applicationRoleConnectionMetadata getApplicationRoleConnectionMetadataRecords(const long& applicationId);
+            [[maybe_unused]] applicationRoleConnectionMetadata updateApplicationRoleConnectionMetadataRecords(const long& applicationId);
+        };
+
+        class channelOptions {
+        private:
+            friend class client;
+            client *client;
+        public:
+            [[maybe_unused]] channel create(const channel& channelOptions);
+            [[maybe_unused]] [[nodiscard]] channel get(const long& channelId, const bool& cacheObject = true) const;
+            [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
+            [[maybe_unused]] bool existsInCache(const long& guildId) const;
+        };
+
+        class guildOptions {
+        private:
+            friend class client;
+            client *client;
+        public:
+            [[maybe_unused]] guild createGuild(const guild& guildOptions, const std::vector<role>& roles = {}, const std::vector<channel>& channels = {});
+            [[maybe_unused]] [[nodiscard]] guild getGuild(const long& guildId, const bool& withCounts = false, const bool& cacheObject = true) const;
+            guild getGuildFromCache(const long& guildId) const;
+            bool guildExistsInCache(const long& guildId) const;
+            guildPreview getGuildPreview(const long& guildId) const;
+        };
+
+        applicationRoleConnectionMetadataOptions applicationRoleConnectionMetadata{};
+        channelOptions channels{};
+        guildOptions guilds{};
 
         [[maybe_unused]] void reconnect();
         [[noreturn]] [[maybe_unused]] void run();

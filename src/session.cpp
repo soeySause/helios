@@ -1,3 +1,4 @@
+#include "heliosException.hpp"
 #include "session.hpp"
 
 // Report a failure
@@ -37,7 +38,7 @@ void session::on_resolve(
         const tcp::resolver::results_type& results)
 {
     if(ec)
-        return fail(ec, "resolve");
+        throw(helios::heliosException(1, "resolve: " + ec.what()));
 
     // Set a timeout on the operation
     beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
@@ -54,7 +55,7 @@ void session::on_resolve(
 void session::on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type& ep)
 {
     if(ec)
-        return fail(ec, "connect");
+        throw(helios::heliosException(1, "connect: " + ec.what()));
 
     // Set a timeout on the operation
     beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
@@ -66,7 +67,7 @@ void session::on_connect(beast::error_code ec, const tcp::resolver::results_type
     {
         ec = beast::error_code(static_cast<int>(::ERR_get_error()),
                                net::error::get_ssl_category());
-        return fail(ec, "connect");
+        throw(helios::heliosException(1, "connect: " + ec.what()));
     }
 
     // Update the host_ string. This will provide the value of the
@@ -86,7 +87,7 @@ void session::on_connect(beast::error_code ec, const tcp::resolver::results_type
 void session::on_ssl_handshake(beast::error_code ec)
 {
     if(ec)
-        return fail(ec, "ssl_handshake");
+        throw(helios::heliosException(1, "ssl handshake: " + ec.what()));
 
     // Turn off the timeout on the tcp_stream, because
     // the websocket stream has its own timeout system.
@@ -117,7 +118,7 @@ void session::on_ssl_handshake(beast::error_code ec)
 void session::on_handshake(beast::error_code ec)
 {
     if(ec)
-        return fail(ec, "handshake");
+        throw(helios::heliosException(1, "handshake: " + ec.what()));
 
     // Send the message
     ws_.async_read(
@@ -133,7 +134,9 @@ void session::on_write(
         std::size_t bytes_transferred)
 {
     boost::ignore_unused(bytes_transferred);
-    if(ec) return fail(ec, "write");
+    if(ec)
+        throw(helios::heliosException(1, "write: " + ec.what()));
+
     queue_.erase(queue_.begin());
 
 }
