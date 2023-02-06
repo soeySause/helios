@@ -2,15 +2,16 @@
 #define HELIOS_INVITE_HPP
 #include <optional>
 #include <string>
+#include <memory>
 #include <unordered_map>
-#include "guild/guild.hpp"
 #include "guild/guildMember.hpp"
 #include "guildScheduledEvent.hpp"
-#include "channel/channel.hpp"
 #include "user.hpp"
 #include "application.hpp"
-namespace helios {
 
+namespace helios {
+    class guild;
+    class channel;
     class inviteStageInstance {
         std::unordered_map<long, guildMember> members;
         std::optional<int> participantCount;
@@ -20,8 +21,8 @@ namespace helios {
 
     class invite {
         std::optional<std::string> code;
-        guild guild;
-        channel channel;
+        std::unique_ptr<guild> guild;
+        std::unique_ptr<channel> channel;
         user inviter;
         std::optional<int> targetType;
         user targetUser;

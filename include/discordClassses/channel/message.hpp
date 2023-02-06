@@ -43,6 +43,8 @@ namespace helios {
         friend class message;
         static messageReference getMessageReferenceData(const nlohmann::json& jsonData);
     public:
+        [[maybe_unused]] messageReference() = default;
+        [[maybe_unused]] messageReference(const long& messageId, const long& guildId, const long& channelId = -1, const bool& failIfNotExists = false);
         std::optional<long> messageId;
         std::optional<long> channelId;
         std::optional<long> guildId;
@@ -66,7 +68,7 @@ namespace helios {
         static message getMessageData(const nlohmann::json& jsonData);
     public:
         message() = default;
-        message(const std::string& content);
+        explicit message(const std::string& content);
         message(const embed& embed);
         message(const std::vector<long> stickerIds);
         message(const messageComponent& messageComponent);
@@ -77,11 +79,12 @@ namespace helios {
         std::optional<std::string> timestamp;
         std::optional<std::string> editedTimestamp;
         std::optional<bool> tts;
+        std::optional<bool> suppressMentions;
         std::optional<bool> mentionEveryone;
         std::unordered_map<long, user> mentions;
         std::unordered_map<long, role> mentionRoles;
         std::unordered_map<long, channelMention> mentionChannels;
-        std::unordered_map <long, attachment> attachments;
+        std::vector <attachment> attachments;
         std::vector <embed> embeds;
         std::unordered_map <long, reaction> reactions;
         std::optional<std::string> nonce;
@@ -98,7 +101,6 @@ namespace helios {
         std::unique_ptr<channel> thread;
         std::vector<messageComponent> components;
         std::unordered_map<long, messageStickerItem> stickerItems;
-        std::unordered_map<long, sticker> stickers;
         std::optional<int> position;
         roleSubscriptionData roleSubscriptionData;
     };

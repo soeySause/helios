@@ -1,9 +1,12 @@
 #ifndef HELIOS_APPLICATIONCOMMANDS_HPP
 #define HELIOS_APPLICATIONCOMMANDS_HPP
+#include <optional>
 
 namespace helios {
 
-    class applicationCommands {
+    class applicationCommand {
+	public:
+	std::optional<long> id;
 
     };
 

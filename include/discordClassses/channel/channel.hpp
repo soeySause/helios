@@ -4,10 +4,13 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include <boost/beast/core/string.hpp>
 #include <nlohmann/json.hpp>
 #include "../guild/guildMember.hpp"
 #include "../user.hpp"
+#include "../invite.hpp"
 #include "request.hpp"
 #include "message.hpp"
 
@@ -133,9 +136,18 @@ namespace helios {
 
         [[maybe_unused]] channel modify(const channel& newChannel = helios::channel(), const std::string& reason = "");
         [[maybe_unused]] channel delete_(const std::string& reason = "");
-        [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> getMessages(const std::vector<std::vector<std::string>>& options = {}) const;
+        [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> getMessages(const std::map<std::string, std::string>& options = {}) const;
         [[maybe_unused]] [[nodiscard]] message getMessage(const long& messageId) const;
         [[maybe_unused]] message createMessage(const message& newMessage = helios::message());
+        [[maybe_unused]] message createMessage(const std::string& message);
+        [[maybe_unused]] message createMessage(const embed& embed);
+        [[maybe_unused]] message createMessage(const std::vector<embed>& embeds);
+        [[maybe_unused]] message createMessage(const attachment& attachment);
+        [[maybe_unused]] message createMessage(const std::vector<attachment>& attachments);
+        [[maybe_unused]] message createMessage(const long& stickerId);
+        [[maybe_unused]] message createMessage(const std::vector<long>& stickerIds);
+        [[maybe_unused]] message createMessage(const messageComponent& messageComponent);
+
         [[maybe_unused]] message crosspostMessage(const long& messageId);
         [[maybe_unused]] void createReaction(const long& messageId, const std::string& emoji);
         [[maybe_unused]] void deleteReaction(const long& messageId, const std::string& emoji);
@@ -143,6 +155,21 @@ namespace helios {
         [[maybe_unused]] std::unordered_map<long, user> getReactions(const long& messageId, const std::string& emoji, std::vector<std::vector<std::string>>& options) const;
         [[maybe_unused]] void deleteAllReactions(const long& messageId);
         [[maybe_unused]] void deleteAllReactionsForEmoji(const long& messageId, const std::string& emoji);
+
+        [[maybe_unused]] message editMessage(const long& messageId, const message& newMessage = helios::message());
+        [[maybe_unused]] message editMessage(const long& messageId, const std::string& message);
+        [[maybe_unused]] message editMessage(const long& messageId, const embed& embed);
+        [[maybe_unused]] message editMessage(const long& messageId, const std::vector<embed>& embeds);
+        [[maybe_unused]] message editMessage(const long& messageId, const attachment& attachment);
+        [[maybe_unused]] message editMessage(const long& messageId, const std::vector<attachment>& attachments);
+        [[maybe_unused]] message editMessage(const long& messageId, const messageComponent& messageComponent);
+
+        [[maybe_unused]] void deleteMessage(const long& messageId, const std::string& reason = "");
+        [[maybe_unused]] void bulkDeleteMessage(const std::vector<long>& messageIdsVector, const std::string& reason = "");
+        [[maybe_unused]] void editPermissions(const overwrite& overwrite, const std::string& reason = "");
+        [[maybe_unused]] [[nodiscard]] invite getInvites();
+
+
     };
 } // helios
 

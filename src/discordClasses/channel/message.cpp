@@ -25,6 +25,13 @@ namespace helios {
         return messageReferenceData;
     }
 
+    messageReference::messageReference(const long &messageId, const long &guildId, const long &channelId, const bool &failIfNotExists) {
+        this->messageId = messageId;
+        this->guildId = guildId;
+        if(channelId != -1) this->channelId = channelId;
+        this->failIfNotExists = failIfNotExists;
+    }
+
     roleSubscriptionData roleSubscriptionData::getRoleSubscriptionDataData(const nlohmann::json &jsonData) {
         roleSubscriptionData roleSubscriptionDataData;
         roleSubscriptionDataData.roleSubscriptionListingId = std::stol(jsonData["role_subscription_data_id"].get<std::string>());
@@ -64,8 +71,7 @@ namespace helios {
 
         if(jsonData.contains("attachments")) {
             for (const nlohmann::basic_json<> &attachment: jsonData["attachments"]) {
-                messageData.attachments[std::stol(
-                        attachment["id"].get<std::string>())] = attachment::getAttachmentData(attachment);
+                messageData.attachments.emplace_back(attachment::getAttachmentData(attachment));
             }
         }
 
@@ -102,12 +108,6 @@ namespace helios {
         if(jsonData.contains("sticker_items")) {
             for (const nlohmann::basic_json<>& stickerItem: jsonData["sticker_items"]) {
                 messageData.stickerItems[std::stol(stickerItem["id"].get<std::string>())] = messageStickerItem::getMessageStickerItemData(stickerItem);
-            }
-        }
-
-        if(jsonData.contains("stickers")) {
-            for (const nlohmann::basic_json<>& sticker: jsonData["stickers"]) {
-                messageData.stickers[std::stol(sticker["id"].get<std::string>())] = sticker::getStickerData(sticker);
             }
         }
 

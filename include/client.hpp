@@ -115,7 +115,7 @@ namespace helios {
 
         bool compress = false;
         int large_threshold = 50;
-        int intents = 7;
+        int intents = 2097151;
 
         std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
         std::condition_variable updateCondition;

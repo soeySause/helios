@@ -8,7 +8,8 @@ namespace helios {
         friend class message;
         static attachment getAttachmentData(const nlohmann::json& jsonData);
     public:
-        std::optional<long> id;
+        attachment() = default;
+        std::optional<int> id;
         std::optional<std::string> filename;
         std::optional<std::string> description;
         std::optional<std::string> contentType;
@@ -18,6 +19,7 @@ namespace helios {
         std::optional<int> height;
         std::optional<int> width;
         std::optional<bool> ephemeral;
+        std::optional<std::string> pathToFile;
     };
 } // helios
 

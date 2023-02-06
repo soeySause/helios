@@ -9,7 +9,6 @@ namespace helios {
         channelMentionData.name = jsonData["name"];
         return channelMentionData;
     }
-
     overwrite overwrite::getOverwriteData(const json &jsonData) {
         overwrite overwriteData;
         overwriteData.id = std::stol(jsonData["id"].get<std::string>());
@@ -18,7 +17,6 @@ namespace helios {
         overwriteData.deny = jsonData["deny"].dump();
         return overwriteData;
     }
-
     threadMetadata threadMetadata::getThreadMetadataData(const json &jsonData) {
         threadMetadata threadMetadataData;
         threadMetadataData.archived = jsonData["archived"];
@@ -29,7 +27,6 @@ namespace helios {
         if(jsonData.contains("create_timestamp") && !jsonData["create_timestamp"].is_null()) threadMetadataData.createTimestamp = jsonData["create_timestamp"];
         return threadMetadataData;
     }
-
     threadMember threadMember::getThreadMemberData(const json &jsonData) {
         threadMember threadMemberData;
         if(jsonData.contains("id")) threadMemberData.id = std::stol(jsonData["id"].get<std::string>());
@@ -39,7 +36,6 @@ namespace helios {
         //if(jsonData.contains("member")) threadMemberData.member = guildMember::getGuildMemberData(jsonData["member"]);
         return threadMemberData;
     }
-
     forumTag forumTag::getForumTagData(const json &jsonData) {
         forumTag tagData;
         tagData.id = std::stol(jsonData["id"].get<std::string>());
@@ -55,7 +51,6 @@ namespace helios {
         if(!jsonData["emoji_name"].is_null()) defaultReactionData.emojiName = jsonData["emoji_name"];
         return defaultReactionData;
     }
-
     channel channel::getChannelData(const json &jsonData) {
         channel channelData;
         channelData.id = std::stol(jsonData["id"].get<std::string>());
@@ -118,7 +113,6 @@ namespace helios {
 
         return channelData;
     }
-
 
     [[maybe_unused]] channel channel::modify(const channel& newChannel, const std::string& reason) {
         assert(this->id.has_value());
@@ -303,30 +297,19 @@ namespace helios {
 
         return channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()), {}, boost::beast::http::verb::delete_, this->botToken.value(), reason)));
     }
-    [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> channel::getMessages(const std::vector<std::vector<std::string>>& options) const {
+    [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> channel::getMessages(const std::map<std::string, std::string>& options) const {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
-        json payload;
-        for(auto& option : options) {
-            if(option.at(0) == "limit") {
-                payload["limit"] = std::stoi(option.at(1));
-            }
-            if(option.at(0) == "around") {
-                payload["around"] = std::stol(option.at(1));
-                break;
-            }
-            if(option.at(0) == "before") {
-                payload["before"] = std::stol(option.at(1));
-                break;
-            }
-            if(option.at(0) == "after") {
-                payload["after"] = std::stol(option.at(1));
-                break;
-            }
+        std::string target = "/api/channels/" + std::to_string(this->id.value()) + "/messages?";
+        for(auto& [option, parameter] : options) {
+            target += option + "=" + parameter + '&';
         }
+        target.pop_back();
+
+
         std::unordered_map<long, message> messages;
-        for (const nlohmann::basic_json<>& message: json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::get, this->botToken.value()))) {
+        for (const nlohmann::basic_json<>& message: json::parse(request::httpsRequest("discord.com", target, {}, boost::beast::http::verb::get, this->botToken.value()))) {
             messages[std::stol(message["id"].get<std::string>())] = message::getMessageData(message);
         }
         return messages;
@@ -338,6 +321,7 @@ namespace helios {
         return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, this->botToken.value())));
 
     }
+
     [[maybe_unused]] message channel::createMessage(const message &newMessage) {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
@@ -346,40 +330,43 @@ namespace helios {
         if(newMessage.content.has_value()) payload["content"] = newMessage.content.value();
         if(newMessage.nonce.has_value()) payload["nonce"] = newMessage.nonce.value();
         if(newMessage.tts.has_value()) payload["tts"] = newMessage.tts.value();
+        
+        json embeds = json::array();
         for(auto& embed: newMessage.embeds) {
-            if (embed.title.has_value()) payload["embed"]["title"] = embed.title.value();
-            if (embed.type.has_value()) payload["embed"]["type"] = embed.type.value();
-            if (embed.description.has_value()) payload["embed"]["description"] = embed.description.value();
-            if (embed.url.has_value()) payload["embed"]["url"] = embed.url.value();
-            if (embed.timestamp.has_value()) payload["embed"]["timestamp"] = embed.timestamp.value();
-            if (embed.color.has_value()) payload["embed"]["color"] = embed.color.value();
+            json embedJson;
+            if (embed.title.has_value()) embedJson["title"] = embed.title.value();
+            if (embed.type.has_value()) embedJson["type"] = embed.type.value();
+            if (embed.description.has_value()) embedJson["description"] = embed.description.value();
+            if (embed.url.has_value()) embedJson["url"] = embed.url.value();
+            if (embed.timestamp.has_value()) embedJson["timestamp"] = embed.timestamp.value();
+            if (embed.color.has_value()) embedJson["color"] = embed.color.value();
 
-            if (embed.footer.proxyIconUrl.has_value()) payload["embed"]["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
-            if (embed.footer.iconUrl.has_value()) payload["embed"]["footer"]["icon_url"] = embed.footer.iconUrl.value();
-            if (embed.footer.text.has_value()) payload["embed"]["footer"]["text"] = embed.footer.text.value();
+            if (embed.footer.proxyIconUrl.has_value()) embedJson["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+            if (embed.footer.iconUrl.has_value()) embedJson["footer"]["icon_url"] = embed.footer.iconUrl.value();
+            if (embed.footer.text.has_value()) embedJson["footer"]["text"] = embed.footer.text.value();
 
-            if (embed.image.url.has_value()) payload["embed"]["image"]["url"] = embed.image.url.value();
-            if (embed.image.proxyUrl.has_value()) payload["embed"]["image"]["proxy_url"] = embed.image.proxyUrl.value();
-            if (embed.image.height.has_value()) payload["embed"]["image"]["height"] = embed.image.height.value();
-            if (embed.image.width.has_value()) payload["embed"]["image"]["width"] = embed.image.width.value();
+            if (embed.image.url.has_value()) embedJson["image"]["url"] = embed.image.url.value();
+            if (embed.image.proxyUrl.has_value()) embedJson["image"]["proxy_url"] = embed.image.proxyUrl.value();
+            if (embed.image.height.has_value()) embedJson["image"]["height"] = embed.image.height.value();
+            if (embed.image.width.has_value()) embedJson["image"]["width"] = embed.image.width.value();
 
-            if (embed.thumbnail.url.has_value()) payload["embed"]["thumbnail"]["url"] = embed.thumbnail.url.value();
-            if (embed.thumbnail.proxyUrl.has_value()) payload["embed"]["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
-            if (embed.thumbnail.height.has_value()) payload["embed"]["thumbnail"]["height"] = embed.thumbnail.height.value();
-            if (embed.thumbnail.width.has_value()) payload["embed"]["thumbnail"]["width"] = embed.thumbnail.width.value();
+            if (embed.thumbnail.url.has_value()) embedJson["thumbnail"]["url"] = embed.thumbnail.url.value();
+            if (embed.thumbnail.proxyUrl.has_value()) embedJson["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+            if (embed.thumbnail.height.has_value()) embedJson["thumbnail"]["height"] = embed.thumbnail.height.value();
+            if (embed.thumbnail.width.has_value()) embedJson["thumbnail"]["width"] = embed.thumbnail.width.value();
 
-            if (embed.video.url.has_value()) payload["embed"]["video"]["url"] = embed.video.url.value();
-            if (embed.video.proxyUrl.has_value()) payload["embed"]["video"]["proxy_url"] = embed.video.proxyUrl.value();
-            if (embed.video.height.has_value()) payload["embed"]["video"]["height"] = embed.video.height.value();
-            if (embed.video.width.has_value()) payload["embed"]["video"]["width"] = embed.video.width.value();
+            if (embed.video.url.has_value()) embedJson["video"]["url"] = embed.video.url.value();
+            if (embed.video.proxyUrl.has_value()) embedJson["video"]["proxy_url"] = embed.video.proxyUrl.value();
+            if (embed.video.height.has_value()) embedJson["video"]["height"] = embed.video.height.value();
+            if (embed.video.width.has_value()) embedJson["video"]["width"] = embed.video.width.value();
 
-            if (embed.provider.name.has_value()) payload["embed"]["provider"]["name"] = embed.provider.name.value();
-            if (embed.provider.url.has_value()) payload["embed"]["provider"]["url"] = embed.provider.url.value();
+            if (embed.provider.name.has_value()) embedJson["provider"]["name"] = embed.provider.name.value();
+            if (embed.provider.url.has_value()) embedJson["provider"]["url"] = embed.provider.url.value();
 
-            if (embed.author.url.has_value()) payload["embed"]["author"]["url"] = embed.author.url.value();
-            if (embed.author.name.has_value()) payload["embed"]["author"]["name"] = embed.author.name.value();
-            if (embed.author.iconUrl.has_value()) payload["embed"]["author"]["icon_url"] = embed.author.iconUrl.value();
-            if (embed.author.proxyIconUrl.has_value()) payload["embed"]["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+            if (embed.author.url.has_value()) embedJson["author"]["url"] = embed.author.url.value();
+            if (embed.author.name.has_value()) embedJson["author"]["name"] = embed.author.name.value();
+            if (embed.author.iconUrl.has_value()) embedJson["author"]["icon_url"] = embed.author.iconUrl.value();
+            if (embed.author.proxyIconUrl.has_value()) embedJson["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
 
             json fields = json::array();
             for (auto &field: embed.fields) {
@@ -389,18 +376,256 @@ namespace helios {
                 if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
                 fields.emplace_back(jsonField);
             }
-            if (!fields.empty()) payload["embed"]["fields"] = fields;
+            if (!fields.empty()) embedJson["fields"] = fields;
+            embeds.emplace_back(embedJson);
         }
+        if( !embeds.empty()) payload["embeds"] = embeds;
+
+        if(newMessage.flags.has_value()) payload["flags"] = newMessage.flags.value();
+
+        json parse = json::array();
+        json users = json::array();
+        json roles = json::array();
+
+        if(newMessage.mentionEveryone.has_value()) {
+            if(newMessage.mentionEveryone.value()) parse.emplace_back("everyone");
+        }
+
+        if(!newMessage.mentions.empty()) {
+            if(!newMessage.mentions.begin()->second.id.has_value()) {
+                parse.emplace_back("users");
+            } else {
+                for(auto& [userId, user] : newMessage.mentions) {
+                    users.emplace_back(std::to_string(userId));
+                }
+            }
+        }
+
+        if(!newMessage.mentionRoles.empty()) {
+            if(!newMessage.mentionRoles.begin()->second.id.has_value()) {
+                parse.emplace_back("roles");
+            } else {
+                for(auto& [roleId, role] : newMessage.mentionRoles) {
+                    roles.emplace_back(std::to_string(roleId));
+                }
+            }
+        }
+
+        if(!parse.empty()) payload["allowed_mentions"]["parse"] = parse;
+        if(newMessage.suppressMentions.has_value()) {
+            if(newMessage.suppressMentions.value()) payload["allowed_mentions"]["parse"] = json::array();
+        }
+        if(!users.empty()) payload["allowed_mentions"]["users"] = users;
+        if(!roles.empty()) payload["allowed_mentions"]["roles"] = roles;
+
         if(newMessage.messageReference.guildId.has_value()) payload["message_reference"]["guild_id"] = newMessage.messageReference.guildId.value();
         if(newMessage.messageReference.messageId.has_value()) payload["message_reference"]["message_id"] = newMessage.messageReference.messageId.value();
         if(newMessage.messageReference.channelId.has_value()) payload["message_reference"]["channel_id"] = newMessage.messageReference.channelId.value();
         if(newMessage.messageReference.failIfNotExists.has_value()) payload["message_reference"]["fail_if_not_exists"] = newMessage.messageReference.failIfNotExists.value();
 
-        //TODO finish this
+        //TODO message components
 
+        json stickers = json::array();
+        for(auto& [stickerId, stickerM] : newMessage.stickerItems) {
+            stickers.emplace_back(stickerId);
+        }
+        if(!stickers.empty()) payload["sticker_ids"] = stickers;
 
+        if(newMessage.attachments.empty()) {
+            return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
+        }
+
+        int i = 0;
+        json attachments = json::array();
+        for(auto& attachment : newMessage.attachments) {
+            json attachmentJson;
+            if(attachment.filename.has_value()) attachmentJson["filename"] = attachment.filename.value();
+            if(attachment.description.has_value()) attachmentJson["description"] = attachment.description.value();
+            if(attachment.contentType.has_value()) attachmentJson["content_type"] = attachment.contentType.value();
+            attachmentJson["id"] = i;
+
+            attachments.emplace_back(attachmentJson);
+            i++;
+        }
+        payload["attachments"] = attachments;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, newMessage.attachments, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const std::string &message) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        payload["content"] = message;
         return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
     }
+    [[maybe_unused]] message channel::createMessage(const embed &embed) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        if (embed.title.has_value()) payload["embed"]["title"] = embed.title.value();
+        if (embed.type.has_value()) payload["embed"]["type"] = embed.type.value();
+        if (embed.description.has_value()) payload["embed"]["description"] = embed.description.value();
+        if (embed.url.has_value()) payload["embed"]["url"] = embed.url.value();
+        if (embed.timestamp.has_value()) payload["embed"]["timestamp"] = embed.timestamp.value();
+        if (embed.color.has_value()) payload["embed"]["color"] = embed.color.value();
+
+        if (embed.footer.proxyIconUrl.has_value()) payload["embed"]["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+        if (embed.footer.iconUrl.has_value()) payload["embed"]["footer"]["icon_url"] = embed.footer.iconUrl.value();
+        if (embed.footer.text.has_value()) payload["embed"]["footer"]["text"] = embed.footer.text.value();
+
+        if (embed.image.url.has_value()) payload["embed"]["image"]["url"] = embed.image.url.value();
+        if (embed.image.proxyUrl.has_value()) payload["embed"]["image"]["proxy_url"] = embed.image.proxyUrl.value();
+        if (embed.image.height.has_value()) payload["embed"]["image"]["height"] = embed.image.height.value();
+        if (embed.image.width.has_value()) payload["embed"]["image"]["width"] = embed.image.width.value();
+
+        if (embed.thumbnail.url.has_value()) payload["embed"]["thumbnail"]["url"] = embed.thumbnail.url.value();
+        if (embed.thumbnail.proxyUrl.has_value()) payload["embed"]["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+        if (embed.thumbnail.height.has_value()) payload["embed"]["thumbnail"]["height"] = embed.thumbnail.height.value();
+        if (embed.thumbnail.width.has_value()) payload["embed"]["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+        if (embed.video.url.has_value()) payload["embed"]["video"]["url"] = embed.video.url.value();
+        if (embed.video.proxyUrl.has_value()) payload["embed"]["video"]["proxy_url"] = embed.video.proxyUrl.value();
+        if (embed.video.height.has_value()) payload["embed"]["video"]["height"] = embed.video.height.value();
+        if (embed.video.width.has_value()) payload["embed"]["video"]["width"] = embed.video.width.value();
+
+        if (embed.provider.name.has_value()) payload["embed"]["provider"]["name"] = embed.provider.name.value();
+        if (embed.provider.url.has_value()) payload["embed"]["provider"]["url"] = embed.provider.url.value();
+
+        if (embed.author.url.has_value()) payload["embed"]["author"]["url"] = embed.author.url.value();
+        if (embed.author.name.has_value()) payload["embed"]["author"]["name"] = embed.author.name.value();
+        if (embed.author.iconUrl.has_value()) payload["embed"]["author"]["icon_url"] = embed.author.iconUrl.value();
+        if (embed.author.proxyIconUrl.has_value()) payload["embed"]["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+        json fields = json::array();
+        for (auto &field: embed.fields) {
+            json jsonField;
+            if (field.name.has_value()) jsonField["name"] = field.name.value();
+            if (field.value.has_value()) jsonField["value"] = field.value.value();
+            if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+            fields.emplace_back(jsonField);
+        }
+        if (!fields.empty()) payload["embed"]["fields"] = fields;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const std::vector<embed> &embedsVector) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        json embeds = json::array();
+        for(auto& embed: embedsVector) {
+            json embedJson;
+            if (embed.title.has_value()) embedJson["title"] = embed.title.value();
+            if (embed.type.has_value()) embedJson["type"] = embed.type.value();
+            if (embed.description.has_value()) embedJson["description"] = embed.description.value();
+            if (embed.url.has_value()) embedJson["url"] = embed.url.value();
+            if (embed.timestamp.has_value()) embedJson["timestamp"] = embed.timestamp.value();
+            if (embed.color.has_value()) embedJson["color"] = embed.color.value();
+
+            if (embed.footer.proxyIconUrl.has_value()) embedJson["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+            if (embed.footer.iconUrl.has_value()) embedJson["footer"]["icon_url"] = embed.footer.iconUrl.value();
+            if (embed.footer.text.has_value()) embedJson["footer"]["text"] = embed.footer.text.value();
+
+            if (embed.image.url.has_value()) embedJson["image"]["url"] = embed.image.url.value();
+            if (embed.image.proxyUrl.has_value()) embedJson["image"]["proxy_url"] = embed.image.proxyUrl.value();
+            if (embed.image.height.has_value()) embedJson["image"]["height"] = embed.image.height.value();
+            if (embed.image.width.has_value()) embedJson["image"]["width"] = embed.image.width.value();
+
+            if (embed.thumbnail.url.has_value()) embedJson["thumbnail"]["url"] = embed.thumbnail.url.value();
+            if (embed.thumbnail.proxyUrl.has_value()) embedJson["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+            if (embed.thumbnail.height.has_value()) embedJson["thumbnail"]["height"] = embed.thumbnail.height.value();
+            if (embed.thumbnail.width.has_value()) embedJson["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+            if (embed.video.url.has_value()) embedJson["video"]["url"] = embed.video.url.value();
+            if (embed.video.proxyUrl.has_value()) embedJson["video"]["proxy_url"] = embed.video.proxyUrl.value();
+            if (embed.video.height.has_value()) embedJson["video"]["height"] = embed.video.height.value();
+            if (embed.video.width.has_value()) embedJson["video"]["width"] = embed.video.width.value();
+
+            if (embed.provider.name.has_value()) embedJson["provider"]["name"] = embed.provider.name.value();
+            if (embed.provider.url.has_value()) embedJson["provider"]["url"] = embed.provider.url.value();
+
+            if (embed.author.url.has_value()) embedJson["author"]["url"] = embed.author.url.value();
+            if (embed.author.name.has_value()) embedJson["author"]["name"] = embed.author.name.value();
+            if (embed.author.iconUrl.has_value()) embedJson["author"]["icon_url"] = embed.author.iconUrl.value();
+            if (embed.author.proxyIconUrl.has_value()) embedJson["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+            json fields = json::array();
+            for (auto &field: embed.fields) {
+                json jsonField;
+                if (field.name.has_value()) jsonField["name"] = field.name.value();
+                if (field.value.has_value()) jsonField["value"] = field.value.value();
+                if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+                fields.emplace_back(jsonField);
+            }
+            if (!fields.empty()) embedJson["fields"] = fields;
+            embeds.emplace_back(embedJson);
+        }
+        payload["embeds"] = embeds;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const attachment &attachment) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        if(attachment.filename.has_value()) payload["attachment"]["filename"] = attachment.filename.value();
+        if(attachment.description.has_value()) payload["attachment"]["description"] = attachment.description.value();
+        if(attachment.contentType.has_value()) payload["attachment"]["content_type"] = attachment.contentType.value();
+        payload["attachment"]["id"] = 0;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, {attachment}, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const std::vector<attachment> &attachmentsVector) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        int i = 0;
+
+        json attachments = json::array();
+        for(auto& attachment : attachmentsVector) {
+            json attachmentJson;
+            if(attachment.filename.has_value()) attachmentJson["filename"] = attachment.filename.value();
+            if(attachment.description.has_value()) attachmentJson["description"] = attachment.description.value();
+            if(attachment.contentType.has_value()) attachmentJson["content_type"] = attachment.contentType.value();
+            attachmentJson["id"] = i;
+
+            attachments.emplace_back(attachmentJson);
+            i++;
+        }
+        payload["attachments"] = attachments;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, attachmentsVector, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const long &stickerId) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        json stickers = json::array();
+        stickers.emplace_back(stickerId);
+        payload["sticker_ids"] = stickers;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::createMessage(const std::vector<long> &stickerIds) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        json stickers = json::array();
+        for(auto& stickerId : stickerIds) {
+            stickers.emplace_back(stickerId);
+        }
+        payload["sticker_ids"] = stickers;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->botToken.value())));
+
+    }
+    [[maybe_unused]] message channel::createMessage(const messageComponent &messageComponent) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        //todo;
+    }
+
     [[maybe_unused]] message channel::crosspostMessage(const long &messageId) {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
@@ -411,19 +636,19 @@ namespace helios {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::put, this->botToken.value());
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::urlEncode(emoji) + "/@me", {}, boost::beast::http::verb::put, this->botToken.value());
     }
     [[maybe_unused]] void channel::deleteReaction(const long &messageId, const std::string &emoji) {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/@me", {}, boost::beast::http::verb::delete_, this->botToken.value());
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::urlEncode(emoji) + "/@me", {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
     [[maybe_unused]] void channel::deleteUserReaction(const long &messageId, const std::string &emoji, const long& userId) {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji) + "/" + std::to_string(userId), {}, boost::beast::http::verb::delete_, this->botToken.value());
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::urlEncode(emoji) + "/" + std::to_string(userId), {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
     [[maybe_unused]] [[nodiscard]] std::unordered_map<long, user> channel::getReactions(const long &messageId, const std::string &emoji, std::vector<std::vector<std::string>> &options) const {
         assert(this->id.has_value());
@@ -440,6 +665,309 @@ namespace helios {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
-        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::url_encode(emoji), {}, boost::beast::http::verb::delete_, this->botToken.value());
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + "/reactions/" + request::urlEncode(emoji), {}, boost::beast::http::verb::delete_, this->botToken.value());
     }
+
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const message &newMessage) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        if(newMessage.content.has_value()) payload["content"] = newMessage.content.value();
+
+        json embeds = json::array();
+        for(auto& embed: newMessage.embeds) {
+            json embedJson;
+            if (embed.title.has_value()) embedJson["title"] = embed.title.value();
+            if (embed.type.has_value()) embedJson["type"] = embed.type.value();
+            if (embed.description.has_value()) embedJson["description"] = embed.description.value();
+            if (embed.url.has_value()) embedJson["url"] = embed.url.value();
+            if (embed.timestamp.has_value()) embedJson["timestamp"] = embed.timestamp.value();
+            if (embed.color.has_value()) embedJson["color"] = embed.color.value();
+
+            if (embed.footer.proxyIconUrl.has_value()) embedJson["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+            if (embed.footer.iconUrl.has_value()) embedJson["footer"]["icon_url"] = embed.footer.iconUrl.value();
+            if (embed.footer.text.has_value()) embedJson["footer"]["text"] = embed.footer.text.value();
+
+            if (embed.image.url.has_value()) embedJson["image"]["url"] = embed.image.url.value();
+            if (embed.image.proxyUrl.has_value()) embedJson["image"]["proxy_url"] = embed.image.proxyUrl.value();
+            if (embed.image.height.has_value()) embedJson["image"]["height"] = embed.image.height.value();
+            if (embed.image.width.has_value()) embedJson["image"]["width"] = embed.image.width.value();
+
+            if (embed.thumbnail.url.has_value()) embedJson["thumbnail"]["url"] = embed.thumbnail.url.value();
+            if (embed.thumbnail.proxyUrl.has_value()) embedJson["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+            if (embed.thumbnail.height.has_value()) embedJson["thumbnail"]["height"] = embed.thumbnail.height.value();
+            if (embed.thumbnail.width.has_value()) embedJson["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+            if (embed.video.url.has_value()) embedJson["video"]["url"] = embed.video.url.value();
+            if (embed.video.proxyUrl.has_value()) embedJson["video"]["proxy_url"] = embed.video.proxyUrl.value();
+            if (embed.video.height.has_value()) embedJson["video"]["height"] = embed.video.height.value();
+            if (embed.video.width.has_value()) embedJson["video"]["width"] = embed.video.width.value();
+
+            if (embed.provider.name.has_value()) embedJson["provider"]["name"] = embed.provider.name.value();
+            if (embed.provider.url.has_value()) embedJson["provider"]["url"] = embed.provider.url.value();
+
+            if (embed.author.url.has_value()) embedJson["author"]["url"] = embed.author.url.value();
+            if (embed.author.name.has_value()) embedJson["author"]["name"] = embed.author.name.value();
+            if (embed.author.iconUrl.has_value()) embedJson["author"]["icon_url"] = embed.author.iconUrl.value();
+            if (embed.author.proxyIconUrl.has_value()) embedJson["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+            json fields = json::array();
+            for (auto &field: embed.fields) {
+                json jsonField;
+                if (field.name.has_value()) jsonField["name"] = field.name.value();
+                if (field.value.has_value()) jsonField["value"] = field.value.value();
+                if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+                fields.emplace_back(jsonField);
+            }
+            if (!fields.empty()) embedJson["fields"] = fields;
+            embeds.emplace_back(embedJson);
+        }
+        if( !embeds.empty()) payload["embeds"] = embeds;
+
+        if(newMessage.flags.has_value()) payload["flags"] = newMessage.flags.value();
+
+        json parse = json::array();
+        json users = json::array();
+        json roles = json::array();
+
+        if(newMessage.mentionEveryone.has_value()) {
+            if(newMessage.mentionEveryone.value()) parse.emplace_back("everyone");
+        }
+
+        if(!newMessage.mentions.empty()) {
+            if(!newMessage.mentions.begin()->second.id.has_value()) {
+                parse.emplace_back("users");
+            } else {
+                for(auto& [userId, user] : newMessage.mentions) {
+                    users.emplace_back(std::to_string(userId));
+                }
+            }
+        }
+
+        if(!newMessage.mentionRoles.empty()) {
+            if(!newMessage.mentionRoles.begin()->second.id.has_value()) {
+                parse.emplace_back("roles");
+            } else {
+                for(auto& [roleId, role] : newMessage.mentionRoles) {
+                    roles.emplace_back(std::to_string(roleId));
+                }
+            }
+        }
+
+        if(!parse.empty()) payload["allowed_mentions"]["parse"] = parse;
+        if(newMessage.suppressMentions.has_value()) {
+            if(newMessage.suppressMentions.value()) payload["allowed_mentions"]["parse"] = json::array();
+        }
+        if(!users.empty()) payload["allowed_mentions"]["users"] = users;
+        if(!roles.empty()) payload["allowed_mentions"]["roles"] = roles;
+
+        //TODO message components
+
+        if(newMessage.attachments.empty()) {
+            return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, boost::beast::http::verb::patch, this->botToken.value())));
+        }
+
+        int i = 0;
+        json attachments = json::array();
+        for(auto& attachment : newMessage.attachments) {
+            json attachmentJson;
+            if(attachment.filename.has_value()) attachmentJson["filename"] = attachment.filename.value();
+            if(attachment.description.has_value()) attachmentJson["description"] = attachment.description.value();
+            if(attachment.contentType.has_value()) attachmentJson["content_type"] = attachment.contentType.value();
+            attachmentJson["id"] = i;
+
+            attachments.emplace_back(attachmentJson);
+            i++;
+        }
+        payload["attachments"] = attachments;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, newMessage.attachments, boost::beast::http::verb::patch, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long &messageId, const std::string &message) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        payload["content"] = message;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, boost::beast::http::verb::patch, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const embed &embed) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        if (embed.title.has_value()) payload["embed"]["title"] = embed.title.value();
+        if (embed.type.has_value()) payload["embed"]["type"] = embed.type.value();
+        if (embed.description.has_value()) payload["embed"]["description"] = embed.description.value();
+        if (embed.url.has_value()) payload["embed"]["url"] = embed.url.value();
+        if (embed.timestamp.has_value()) payload["embed"]["timestamp"] = embed.timestamp.value();
+        if (embed.color.has_value()) payload["embed"]["color"] = embed.color.value();
+
+        if (embed.footer.proxyIconUrl.has_value()) payload["embed"]["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+        if (embed.footer.iconUrl.has_value()) payload["embed"]["footer"]["icon_url"] = embed.footer.iconUrl.value();
+        if (embed.footer.text.has_value()) payload["embed"]["footer"]["text"] = embed.footer.text.value();
+
+        if (embed.image.url.has_value()) payload["embed"]["image"]["url"] = embed.image.url.value();
+        if (embed.image.proxyUrl.has_value()) payload["embed"]["image"]["proxy_url"] = embed.image.proxyUrl.value();
+        if (embed.image.height.has_value()) payload["embed"]["image"]["height"] = embed.image.height.value();
+        if (embed.image.width.has_value()) payload["embed"]["image"]["width"] = embed.image.width.value();
+
+        if (embed.thumbnail.url.has_value()) payload["embed"]["thumbnail"]["url"] = embed.thumbnail.url.value();
+        if (embed.thumbnail.proxyUrl.has_value()) payload["embed"]["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+        if (embed.thumbnail.height.has_value()) payload["embed"]["thumbnail"]["height"] = embed.thumbnail.height.value();
+        if (embed.thumbnail.width.has_value()) payload["embed"]["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+        if (embed.video.url.has_value()) payload["embed"]["video"]["url"] = embed.video.url.value();
+        if (embed.video.proxyUrl.has_value()) payload["embed"]["video"]["proxy_url"] = embed.video.proxyUrl.value();
+        if (embed.video.height.has_value()) payload["embed"]["video"]["height"] = embed.video.height.value();
+        if (embed.video.width.has_value()) payload["embed"]["video"]["width"] = embed.video.width.value();
+
+        if (embed.provider.name.has_value()) payload["embed"]["provider"]["name"] = embed.provider.name.value();
+        if (embed.provider.url.has_value()) payload["embed"]["provider"]["url"] = embed.provider.url.value();
+
+        if (embed.author.url.has_value()) payload["embed"]["author"]["url"] = embed.author.url.value();
+        if (embed.author.name.has_value()) payload["embed"]["author"]["name"] = embed.author.name.value();
+        if (embed.author.iconUrl.has_value()) payload["embed"]["author"]["icon_url"] = embed.author.iconUrl.value();
+        if (embed.author.proxyIconUrl.has_value()) payload["embed"]["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+        json fields = json::array();
+        for (auto &field: embed.fields) {
+            json jsonField;
+            if (field.name.has_value()) jsonField["name"] = field.name.value();
+            if (field.value.has_value()) jsonField["value"] = field.value.value();
+            if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+            fields.emplace_back(jsonField);
+        }
+        if (!fields.empty()) payload["embed"]["fields"] = fields;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, boost::beast::http::verb::patch, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const std::vector<embed> &embedsVector) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        json embeds = json::array();
+        for(auto& embed: embedsVector) {
+            json embedJson;
+            if (embed.title.has_value()) embedJson["title"] = embed.title.value();
+            if (embed.type.has_value()) embedJson["type"] = embed.type.value();
+            if (embed.description.has_value()) embedJson["description"] = embed.description.value();
+            if (embed.url.has_value()) embedJson["url"] = embed.url.value();
+            if (embed.timestamp.has_value()) embedJson["timestamp"] = embed.timestamp.value();
+            if (embed.color.has_value()) embedJson["color"] = embed.color.value();
+
+            if (embed.footer.proxyIconUrl.has_value()) embedJson["footer"]["proxy_icon_url"] = embed.footer.proxyIconUrl.value();
+            if (embed.footer.iconUrl.has_value()) embedJson["footer"]["icon_url"] = embed.footer.iconUrl.value();
+            if (embed.footer.text.has_value()) embedJson["footer"]["text"] = embed.footer.text.value();
+
+            if (embed.image.url.has_value()) embedJson["image"]["url"] = embed.image.url.value();
+            if (embed.image.proxyUrl.has_value()) embedJson["image"]["proxy_url"] = embed.image.proxyUrl.value();
+            if (embed.image.height.has_value()) embedJson["image"]["height"] = embed.image.height.value();
+            if (embed.image.width.has_value()) embedJson["image"]["width"] = embed.image.width.value();
+
+            if (embed.thumbnail.url.has_value()) embedJson["thumbnail"]["url"] = embed.thumbnail.url.value();
+            if (embed.thumbnail.proxyUrl.has_value()) embedJson["thumbnail"]["proxy_url"] = embed.thumbnail.proxyUrl.value();
+            if (embed.thumbnail.height.has_value()) embedJson["thumbnail"]["height"] = embed.thumbnail.height.value();
+            if (embed.thumbnail.width.has_value()) embedJson["thumbnail"]["width"] = embed.thumbnail.width.value();
+
+            if (embed.video.url.has_value()) embedJson["video"]["url"] = embed.video.url.value();
+            if (embed.video.proxyUrl.has_value()) embedJson["video"]["proxy_url"] = embed.video.proxyUrl.value();
+            if (embed.video.height.has_value()) embedJson["video"]["height"] = embed.video.height.value();
+            if (embed.video.width.has_value()) embedJson["video"]["width"] = embed.video.width.value();
+
+            if (embed.provider.name.has_value()) embedJson["provider"]["name"] = embed.provider.name.value();
+            if (embed.provider.url.has_value()) embedJson["provider"]["url"] = embed.provider.url.value();
+
+            if (embed.author.url.has_value()) embedJson["author"]["url"] = embed.author.url.value();
+            if (embed.author.name.has_value()) embedJson["author"]["name"] = embed.author.name.value();
+            if (embed.author.iconUrl.has_value()) embedJson["author"]["icon_url"] = embed.author.iconUrl.value();
+            if (embed.author.proxyIconUrl.has_value()) embedJson["author"]["proxy_icon_url"] = embed.author.proxyIconUrl.value();
+
+            json fields = json::array();
+            for (auto &field: embed.fields) {
+                json jsonField;
+                if (field.name.has_value()) jsonField["name"] = field.name.value();
+                if (field.value.has_value()) jsonField["value"] = field.value.value();
+                if (field.inline_.has_value()) jsonField["inline"] = field.inline_.value();
+                fields.emplace_back(jsonField);
+            }
+            if (!fields.empty()) embedJson["fields"] = fields;
+            embeds.emplace_back(embedJson);
+        }
+        payload["embeds"] = embeds;
+        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, boost::beast::http::verb::post, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const attachment &attachment) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        if(attachment.filename.has_value()) payload["attachment"]["filename"] = attachment.filename.value();
+        if(attachment.description.has_value()) payload["attachment"]["description"] = attachment.description.value();
+        if(attachment.contentType.has_value()) payload["attachment"]["content_type"] = attachment.contentType.value();
+        payload["attachment"]["id"] = 0;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), payload, {attachment}, boost::beast::http::verb::patch, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const std::vector<attachment> &attachmentsVector) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        int i = 0;
+
+        json attachments = json::array();
+        for(auto& attachment : attachmentsVector) {
+            json attachmentJson;
+            if(attachment.filename.has_value()) attachmentJson["filename"] = attachment.filename.value();
+            if(attachment.description.has_value()) attachmentJson["description"] = attachment.description.value();
+            if(attachment.contentType.has_value()) attachmentJson["content_type"] = attachment.contentType.value();
+            attachmentJson["id"] = i;
+
+            attachments.emplace_back(attachmentJson);
+            i++;
+        }
+        payload["attachments"] = attachments;
+        return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId) + std::to_string(messageId), payload, attachmentsVector, boost::beast::http::verb::patch, this->botToken.value())));
+    }
+    [[maybe_unused]] message channel::editMessage(const long& messageId, const messageComponent &messageComponent) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        //todo;
+    }
+
+    [[maybe_unused]] void channel::deleteMessage(const long& messageId, const std::string& reason) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::delete_, this->botToken.value(), reason);
+    }
+    [[maybe_unused]] void channel::bulkDeleteMessage(const std::vector<long>& messageIdsVector, const std::string& reason) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+
+        json payload;
+        payload["messages"] = messageIdsVector;
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/bulk-delete", payload, boost::beast::http::verb::post, this->botToken.value(), reason);
+    }
+    [[maybe_unused]] void channel::editPermissions(const overwrite &overwrite, const std::string &reason) {
+        assert(this->id.has_value());
+        assert(this->botToken.has_value());
+        assert(overwrite.id.has_value());
+        assert(overwrite.type.has_value());
+
+        json payload;
+        if(overwrite.allow.has_value()) payload["allow"] = overwrite.allow.value();
+        if(overwrite.deny.has_value()) payload["deny"] = overwrite.deny.value();
+        payload["type"] = overwrite.type.value();
+
+        request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/permissions/" + std::to_string(overwrite.id.value()), payload, boost::beast::http::verb::put, this->botToken.value(), reason);
+    }
+
+    [[maybe_unused]] [[nodiscard]] invite channel::getInvites() {
+        //return invite::getInviteData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, this->botToken.value())));
+    }
+
+
 } // helios
