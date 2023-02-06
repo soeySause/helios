@@ -167,7 +167,16 @@ namespace helios {
         [[maybe_unused]] void deleteMessage(const long& messageId, const std::string& reason = "");
         [[maybe_unused]] void bulkDeleteMessage(const std::vector<long>& messageIdsVector, const std::string& reason = "");
         [[maybe_unused]] void editPermissions(const overwrite& overwrite, const std::string& reason = "");
-        [[maybe_unused]] [[nodiscard]] invite getInvites();
+        [[maybe_unused]] [[nodiscard]] inviteWithMetadata getInvites();
+        [[maybe_unused]] invite createInvite(const invite& invite, const std::string& reason = "");
+        [[maybe_unused]] void deletePermission(const long& overwriteId, const std::string& reason = "");
+        [[maybe_unused]] followedChannel followAnnouncementChannel(const long& webhookChannelId);
+        [[maybe_unused]] void triggerTypingIndicator();
+        [[maybe_unused]] [[nodiscard]] std::vector<message> getPinnedMessages();
+        [[maybe_unused]] void pinMessage(const long& messageId, const std::string& reason = "");
+        [[maybe_unused]] void unpinMessage(const long& messageId, const std::string& reason = "");
+        [[maybe_unused]] void groupDmAddRecipient(const long& userId, const std::string& accessToken, const std::string& nick);
+        [[maybe_unused]] void groupDmRemoveRecipient(const long& userId);
 
 
     };

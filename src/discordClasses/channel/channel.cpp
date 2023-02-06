@@ -965,9 +965,13 @@ namespace helios {
         request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/permissions/" + std::to_string(overwrite.id.value()), payload, boost::beast::http::verb::put, this->botToken.value(), reason);
     }
 
-    [[maybe_unused]] [[nodiscard]] invite channel::getInvites() {
-        //return invite::getInviteData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages/" + std::to_string(messageId), {}, boost::beast::http::verb::get, this->botToken.value())));
+    [[maybe_unused]] [[nodiscard]] inviteWithMetadata channel::getInvites() {
+        return inviteWithMetadata::getInviteWithMetadataData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/invites", {}, boost::beast::http::verb::get, this->botToken.value())));
     }
+    [[maybe_unused]] inviteWithMetadata channel::createInvite();
+
+
+
 
 
 } // helios

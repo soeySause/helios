@@ -4,11 +4,13 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <nlohmann/json.hpp>
 #include "guild/guildMember.hpp"
 #include "guildScheduledEvent.hpp"
 #include "user.hpp"
 #include "application.hpp"
 
+using nlohmann::json;
 namespace helios {
     class guild;
     class channel;
@@ -34,7 +36,11 @@ namespace helios {
         guildScheduledEvent guildScheduledEvent;
     };
 
-    class inviteMetadata : public invite {
+    class inviteWithMetadata : public invite {
+    private:
+        friend class channel;
+        static inviteWithMetadata getInviteWithMetadataData(const json& jsonData);
+    public:
         std::unordered_map<long, guildMember> members;
         std::optional<int> participantCount;
         std::optional<int> speakerCount;
