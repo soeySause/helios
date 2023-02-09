@@ -1,5 +1,6 @@
 #include "request.hpp"
-
+#include <chrono>
+#include <thread>
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -11,7 +12,9 @@ int request::httpsResponseCode;
 std::string request::httpsResponseReason;
 
 
-std::string request::httpsRequest(const std::string& host, const std::string& target, const json& payload, const http::verb& method, const std::string& authorization, const std::string& reason) {
+std::string request::httpsRequest(const std::string& host, const std::string& target, const json& payload, const http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::string& reason) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(rateLimit->rateLimitGlobal->countHttpsReq()));
+
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
     ssl::context ctx(ssl::context::sslv23);
@@ -60,7 +63,6 @@ std::string request::httpsRequest(const std::string& host, const std::string& ta
                                        "\nEndpoint: " + std::string(boost::beast::http::to_string(req.method())) + " " + target +
                                        "\nError message: " + request::httpsResponseReason));
     }
-
     return res.body();
 }
 

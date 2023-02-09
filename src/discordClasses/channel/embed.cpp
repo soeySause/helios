@@ -1,4 +1,4 @@
-#include "discordClassses/channel/embed.hpp"
+#include "discordClasses/channel/embed.hpp"
 
 namespace helios {
     embedThumbnail embedThumbnail::getEmbedThumbnailData(const nlohmann::json &jsonData) {

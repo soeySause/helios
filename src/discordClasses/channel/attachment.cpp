@@ -1,4 +1,4 @@
-#include "discordClassses/channel/attachment.hpp"
+#include "discordClasses/channel/attachment.hpp"
 
 helios::attachment helios::attachment::getAttachmentData(const nlohmann::json &jsonData) {
     helios::attachment attachmentData;

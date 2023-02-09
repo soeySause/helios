@@ -20,7 +20,7 @@
 #include "event.hpp"
 #include "cache.hpp"
 #include "request.hpp"
-#include "discordClassses/discordClasses.hpp"
+#include "discordClasses/discordClasses.hpp"
 #include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
@@ -71,6 +71,8 @@ namespace helios {
     struct shardStruct {
         int shardId{};
         int seq = 0;
+        std::vector<std::time_t> sentMessageTimestamp;
+
         bool running = false;
         bool reconnect = false;
         bool fullReconnect = false;
@@ -111,6 +113,7 @@ namespace helios {
     private:
         std::string host;
         std::string botToken;
+        std::shared_ptr<rateLimitStruct> rateLimit;
         int maxConcurrency;
 
         bool compress = false;
@@ -127,6 +130,7 @@ namespace helios {
         static void sendHeartbeat(const std::shared_ptr<shard>& shard);
         void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
         void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
+        static bool sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload);
 
         json getIdentifyPayload(const int& shard);
     protected:
@@ -143,6 +147,7 @@ namespace helios {
 
     public:
         explicit client(const std::string& token);
+        explicit client(const std::string& token, const std::map<std::string, int>& options);
 
         class applicationRoleConnectionMetadataOptions {
         private:
@@ -152,7 +157,6 @@ namespace helios {
             [[maybe_unused]] applicationRoleConnectionMetadata getApplicationRoleConnectionMetadataRecords(const long& applicationId);
             [[maybe_unused]] applicationRoleConnectionMetadata updateApplicationRoleConnectionMetadataRecords(const long& applicationId);
         };
-
         class channelOptions {
         private:
             friend class client;
@@ -163,7 +167,6 @@ namespace helios {
             [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
             [[maybe_unused]] bool existsInCache(const long& guildId) const;
         };
-
         class guildOptions {
         private:
             friend class client;

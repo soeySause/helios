@@ -1,6 +1,4 @@
-
-
-#include "discordClassses/stageInstance.hpp"
+#include "discordClasses/stageInstance.hpp"
 
 namespace helios {
 } // helios

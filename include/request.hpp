@@ -13,20 +13,19 @@
 #include <fstream>
 #include <memory>
 
+#include "rateLimit.hpp"
 #include "heliosException.hpp"
-#include "discordClassses/channel/attachment.hpp"
+#include "discordClasses/channel/attachment.hpp"
 #include "ssl/root_certification.hpp"
 
-class request
-{
+class request {
 private:
     static int httpsResponseCode;
     static std::string httpsResponseReason;
  public:
-    static std::string httpsRequest(const std::string& host, const std::string& target, const nlohmann::json& payload, const boost::beast::http::verb& method, const std::string& authorization = "", const std::string& reason = "");
+    static std::string httpsRequest(const std::string& host, const std::string& target, const nlohmann::json& payload, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization = "", const std::string& reason = "");
     static std::string attachmentHttpsRequest(const std::string& host, const std::string& target, const nlohmann::json& jsonPayload, const std::vector<helios::attachment>& attachments, const boost::beast::http::verb& method, const std::string& authorization = "", const std::string& reason = "");
     static std::string urlEncode(const std::string &value);
     static std::string generateRandomString(const std::size_t& length);
-
-    };
+};
 #endif //HELIOS_REQUEST_HPP

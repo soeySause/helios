@@ -1,4 +1,4 @@
-#include "discordClassses/interactions/interaction.hpp"
+#include "discordClasses/interactions/interaction.hpp"
 
 namespace helios {
     messageInteraction messageInteraction::getMessageInteractionData(const nlohmann::json &jsonData) {

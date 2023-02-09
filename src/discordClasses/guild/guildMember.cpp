@@ -1,4 +1,4 @@
-#include "discordClassses/guild/guildMember.hpp"
+#include "discordClasses/guild/guildMember.hpp"
 
 helios::guildMember helios::guildMember::getGuildMemberData(const nlohmann::json &jsonData) {
     guildMember guildMemberData;

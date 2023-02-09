@@ -11,7 +11,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/filesystem.hpp>
 
-#include "discordClassses/discordClasses.hpp"
+#include "discordClasses/discordClasses.hpp"
 #include "heliosException.hpp"
 
 namespace helios {

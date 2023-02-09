@@ -1,4 +1,4 @@
-#include "discordClassses/emoji.hpp"
+#include "discordClasses/emoji.hpp"
 
 namespace helios {
     emoji emoji::getEmojiData(const nlohmann::json& jsonData) {

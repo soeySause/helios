@@ -8,7 +8,31 @@ namespace helios {
         this->channels.client = this;
         this->guilds.client = this;
 
-        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, token));
+        this->rateLimit = std::make_shared<rateLimitStruct>();
+        this->rateLimit->rateLimitGlobal = std::make_unique<rateLimitGlobal>(50);
+
+        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token));
+        this->shards = getGateway["shards"];
+        this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
+        this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
+    }
+
+    client::client(const std::string& token, const std::map<std::string, int>& options) {
+        cache::createCacheDirectory();
+        this->botToken = token;
+        this->applicationRoleConnectionMetadata.client = this;
+        this->channels.client = this;
+        this->guilds.client = this;
+
+        int globalRateLimit = 50;
+        for(auto& option : options) {
+            if(option.first == "globalRateLimit") globalRateLimit = option.second;
+        }
+
+        this->rateLimit = std::make_shared<rateLimitStruct>();
+        this->rateLimit->rateLimitGlobal = std::make_unique<rateLimitGlobal>(globalRateLimit);
+
+        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token));
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
@@ -175,7 +199,7 @@ namespace helios {
             reconnectingPayload["d"]["token"] = this->botToken;
             reconnectingPayload["d"]["session_id"] = shard->shardStructPtr->sessionId;
             reconnectingPayload["d"]["seq"] = shard->shardStructPtr->seq;
-            sessionShard->asyncQueue(reconnectingPayload.dump());
+            client::sendGatewayMessage(shard, reconnectingPayload.dump());
         }
 
         while (sessionShard->is_socket_open()) {
@@ -255,7 +279,7 @@ namespace helios {
                 startHeartbeatCycle(shard);
                 if(!shard->shardStructPtr->reconnect) {
                     json identifyPayload = getIdentifyPayload(shard->shardStructPtr->shardId);
-                    sessionShard->asyncQueue(identifyPayload.dump());
+                    client::sendGatewayMessage(shard, identifyPayload.dump());
                 }
                 shard->shardStructPtr->reconnect = false;
                 return;
@@ -337,6 +361,24 @@ namespace helios {
         }
     }
 
+    bool client::sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload) {
+        if(!shard->shardStructPtr->sentMessageTimestamp.empty()) {
+            while (static_cast<long int>(shard->shardStructPtr->sentMessageTimestamp.back()) >
+                   static_cast<long int>(shard->shardStructPtr->sentMessageTimestamp.front()) + 60) {
+                    shard->shardStructPtr->sentMessageTimestamp.pop_back();
+            }
+        }
+        if(shard->shardStructPtr->sentMessageTimestamp.size() >= 120) {
+            std::cerr << "Failed to send gateway message to connection due to rate limit" << std::endl;
+            return false;
+        }
+
+        shard->shardStructPtr->sentMessageTimestamp.emplace_back(std::time(nullptr));
+        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
+        sessionShard->asyncQueue(payload);
+        return true;
+    }
+
     void client::startHeartbeatCycle(const std::shared_ptr<shard>& shard) {
         std::unique_ptr<std::thread> heartbeatThread;
 
@@ -363,7 +405,7 @@ namespace helios {
         heartbeatPayload["d"] = shard->shardStructPtr->seq;
 
         std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
-        sessionShard->asyncQueue(heartbeatPayload.dump());
+        client::sendGatewayMessage(shard, heartbeatPayload.dump());
     }
 
     void client::heartbeatCycle(const std::shared_ptr<shard>& shard)
@@ -483,11 +525,12 @@ namespace helios {
     [[maybe_unused]] void client::setLargeThreshold(const int userInputThreshold) {
         this->large_threshold = userInputThreshold;
     }
+
     applicationRoleConnectionMetadata
     client::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(
             const long &applicationId) {
         return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::get, client->botToken)));
+                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::get, client->rateLimit, client->botToken)));
 
     }
 
@@ -495,13 +538,14 @@ namespace helios {
     client::applicationRoleConnectionMetadataOptions::updateApplicationRoleConnectionMetadataRecords(
             const long &applicationId) {
         return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
-                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::put, client->botToken)));
+                (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::put, client->rateLimit, client->botToken)));
     }
 
     channel client::channelOptions::get(const long &channelId, const bool &cacheObject) const {
-        channel reqChannel = channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, client->botToken)));
+        channel reqChannel = channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, client->rateLimit, client->botToken)));
         reqChannel.botToken = client->botToken;
         reqChannel.shard = client->threadMap[std::this_thread::get_id()];
+        reqChannel.rateLimit = client->rateLimit;
         return reqChannel;
     }
 
@@ -566,14 +610,14 @@ namespace helios {
         if(guildOptions.systemChannelId.has_value()) createGuildPayload["system_channel_id"] = guildOptions.systemChannelId.value();
         if(guildOptions.systemChannelFlags.has_value()) createGuildPayload["system_channel_flags"] = guildOptions.systemChannelFlags.value();
 
-        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), boost::beast::http::verb::post, client->botToken);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), boost::beast::http::verb::post, client->rateLimit, client->botToken);
         return guild::getGuildData(json::parse(newGuild));
     }
 
     guild client::guildOptions::getGuild(const long& guildId, const bool& withCounts, const bool& cacheObject) const {
         json payload;
         payload["with_counts"] = withCounts;
-        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), boost::beast::http::verb::get, client->botToken);
+        const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds/" + std::to_string(guildId), payload.dump(), boost::beast::http::verb::get, client->rateLimit, client->botToken);
         if(cacheObject) {
 
         }

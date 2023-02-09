@@ -1,5 +1,5 @@
-#include "discordClassses/channel/message.hpp"
-#include "discordClassses/channel/channel.hpp"
+#include "discordClasses/channel/message.hpp"
+#include "discordClasses/channel/channel.hpp"
 namespace helios {
     reaction reaction::getReactionData(const nlohmann::json &jsonData) {
         reaction reactionData;

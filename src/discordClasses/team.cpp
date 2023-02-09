@@ -1,4 +1,4 @@
-#include "discordClassses/team.hpp"
+#include "discordClasses/team.hpp"
 
 helios::teamMember helios::teamMember::getTeamMemberData(const nlohmann::json &jsonData) {
     teamMember teamMemberData;

@@ -1,4 +1,4 @@
-#include "discordClassses/auditLog.hpp"
+#include "discordClasses/auditLog.hpp"
  helios::auditLogChange helios::auditLogChange::getAuditLogChangeData(const nlohmann::json &guildData) {
     auditLogChange auditLogChangeData;
      if(guildData.contains("new_value")) auditLogChangeData.newValue = guildData["new_value"];

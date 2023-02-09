@@ -1,4 +1,4 @@
-#include "discordClassses/interactions/messageComponent.hpp"
+#include "discordClasses/interactions/messageComponent.hpp"
 
 namespace helios {
 } // helios

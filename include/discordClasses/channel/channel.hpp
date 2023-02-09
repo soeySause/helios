@@ -97,6 +97,7 @@ namespace helios {
 
         std::optional<std::string> botToken;
         std::optional<int> shard;
+        std::shared_ptr<rateLimitStruct> rateLimit;
         static channel getChannelData(const json& jsonData);
     public:
         std::optional<long> id;

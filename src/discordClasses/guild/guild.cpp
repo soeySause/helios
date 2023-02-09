@@ -1,4 +1,4 @@
-#include "discordClassses/guild/guild.hpp"
+#include "discordClasses/guild/guild.hpp"
 #include <optional>
 namespace helios {
 

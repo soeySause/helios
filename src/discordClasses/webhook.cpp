@@ -1,4 +1,4 @@
-#include "discordClassses/webhook.hpp"
+#include "discordClasses/webhook.hpp"
 
 namespace helios {
 

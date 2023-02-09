@@ -1,4 +1,4 @@
-#include "discordClassses/user.hpp"
+#include "discordClasses/user.hpp"
 
 helios::user helios::user::getUserData(const nlohmann::json& jsonData) {
     user userData;
