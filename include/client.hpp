@@ -163,7 +163,7 @@ namespace helios {
             client *client;
         public:
             [[maybe_unused]] channel create(const channel& channelOptions);
-            [[maybe_unused]] [[nodiscard]] channel get(const long& channelId, const bool& cacheObject = true) const;
+            [[maybe_unused]] [[nodiscard]] std::future<channel> get(const long& channelId, const bool& cacheObject = true) const;
             [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
             [[maybe_unused]] bool existsInCache(const long& guildId) const;
         };

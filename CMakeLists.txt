@@ -21,9 +21,11 @@ target_sources(${PROJECT_NAME} PRIVATE
         include/request.hpp
         src/sharding.cpp
         src/event.cpp
-        include/heliosException.hpp
         src/cache.cpp
         include/cache.hpp
+        src/rateLimit.cpp
+        include/rateLimit.hpp
+        include/heliosException.hpp
 
         src/discordClasses/application.cpp
         include/discordClasses/application.hpp
@@ -56,7 +58,25 @@ target_sources(${PROJECT_NAME} PRIVATE
         include/discordClasses/interactions/interaction.hpp
         src/discordClasses/interactions/messageComponent.cpp
         include/discordClasses/interactions/messageComponent.hpp
-        )
+        src/discordClasses/guild/guild.cpp
+        include/discordClasses/guild/guild.hpp
+        src/discordClasses/voice.cpp include/discordClasses/voice.hpp
+        include/discordClasses/invite.hpp src/discordClasses/invite.cpp
+        src/discordClasses/guildScheduledEvent.cpp
+        include/discordClasses/guildScheduledEvent.hpp
+        src/discordClasses/eventFields/presence.cpp
+        include/discordClasses/eventFields/presence.hpp
+        src/discordClasses/eventFields/activity.cpp include/discordClasses/eventFields/activity.hpp
+        src/discordClasses/stageInstance.cpp
+        include/discordClasses/stageInstance.hpp
+        src/discordClasses/autoModeration.cpp
+        include/discordClasses/autoModeration.hpp
+        src/discordClasses/guildTemplate.cpp
+        include/discordClasses/guildTemplate.hpp
+        src/discordClasses/webhook.cpp
+        include/discordClasses/webhook.hpp
+        src/discordClasses/interactions/applicationCommands.cpp
+        include/discordClasses/interactions/applicationCommands.hpp)
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
 target_link_libraries(${PROJECT_NAME} nlohmann_json)

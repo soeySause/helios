@@ -3,17 +3,48 @@
 #include <memory>
 #include <iostream>
 
-httpRequest::httpRequest(const std::string &host, const std::string &target, const nlohmann::json &payload,
-                         const boost::beast::http::verb &method, const std::string &authorization,
-                         const std::string &reason, const std::vector<helios::attachment>& attachments) {
+httpRequest::httpRequest(const std::string& host, const std::string& target, const json& payload, const boost::beast::http::verb& method,const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::string& reason, const std::function<void(http::response<http::string_body>)>& onResponse) {
     this->host = host;
     this->target = target;
     this->payload = payload;
     this->method = method;
+    this->rateLimit = rateLimit;
     this->authorization = authorization;
     this->reason = reason;
-    this->attachments = attachments;
+    this->onResponse = onResponse;
 }
+httpRequest::httpRequest(const std::string& host, const std::string& target, const json& payload, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::function<void(http::response<http::string_body>)>& onResponse) {
+    this->host = host;
+    this->target = target;
+    this->payload = payload;
+    this->method = method;
+    this->rateLimit = rateLimit;
+    this->authorization = authorization;
+    this->onResponse = onResponse;
+}
+httpRequest::httpRequest(const std::string& host, const std::string& target, const json& jsonPayload, const std::vector<helios::attachment>& attachments, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::string& reason, const std::function<void(http::response<http::string_body>)>& onResponse) {
+    this->host = host;
+    this->target = target;
+    this->attachments = attachments;
+    this->payload = jsonPayload;
+    this->method = method;
+    this->rateLimit = rateLimit;
+    this->authorization = authorization;
+    this->reason = reason;
+    this->onResponse = onResponse;
+}
+httpRequest::httpRequest(const std::string& host, const std::string& target, const json& jsonPayload, const std::vector<helios::attachment>& attachments, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::function<void(http::response<http::string_body>)>& onResponse) {
+    this->host = host;
+    this->target = target;
+    this->attachments = attachments;
+    this->payload = jsonPayload;
+    this->method = method;
+    this->rateLimit = rateLimit;
+    this->authorization = authorization;
+    this->onResponse = onResponse;
+
+}
+
 rateLimitGlobal::rateLimitGlobal(const int& globalRateLimit) {
     this->globalRateLimit = globalRateLimit;
 }

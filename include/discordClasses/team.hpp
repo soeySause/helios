@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 #include "user.hpp"
-#include "heliosException.hpp"
+#include "../heliosException.hpp"
 
 namespace helios {
     class teamMember {

@@ -112,7 +112,7 @@ namespace helios {
 
         return channelData;
     }
-
+/*
     [[maybe_unused]] channel channel::modify(const channel& newChannel, const std::string& reason) {
         assert(this->id.has_value());
         assert(this->type.has_value());
@@ -449,13 +449,23 @@ namespace helios {
         payload["attachments"] = attachments;
         return message::getMessageData(json::parse(request::attachmentHttpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, newMessage.attachments, boost::beast::http::verb::post, this->botToken.value())));
     }
-    [[maybe_unused]] message channel::createMessage(const std::string &message) {
+    [[maybe_unused]] std::future<message> channel::createMessage(const std::string &message) {
         assert(this->id.has_value());
         assert(this->botToken.has_value());
 
         json payload;
         payload["content"] = message;
-        return message::getMessageData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->rateLimit, this->botToken.value())));
+
+        std::promise<helios::message> promise;
+        auto future = promise.get_future();
+
+        std::async([&promise, &payload, this]() {
+            auto response = request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/messages", payload, boost::beast::http::verb::post, this->rateLimit, this->botToken.value());
+            auto result = message::getMessageData(json::parse(response.get()));
+            promise.set_value(result);
+        });
+
+        return future;
     }
     [[maybe_unused]] message channel::createMessage(const embed &embed) {
         assert(this->id.has_value());
@@ -968,9 +978,5 @@ namespace helios {
     //    return inviteWithMetadata::getInviteWithMetadataData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(this->id.value()) + "/invites", {}, boost::beast::http::verb::get, this->botToken.value())));
     //}
     //[[maybe_unused]] inviteWithMetadata channel::createInvite();
-
-
-
-
-
+*/
 } // helios

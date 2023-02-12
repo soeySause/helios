@@ -11,7 +11,13 @@ namespace helios {
         this->rateLimit = std::make_shared<rateLimitStruct>();
         this->rateLimit->rateLimitGlobal = std::make_unique<rateLimitGlobal>(50);
 
-        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token));
+        std::promise<json> getGatewayPromise;
+        httpRequest getGatewayReq("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token, [&getGatewayPromise](const http::response<http::string_body>& res_)  {
+            getGatewayPromise.set_value(json::parse(res_.body()));
+        });
+        request::sendHttpRequest(getGatewayReq);
+        json getGateway = getGatewayPromise.get_future().get();
+
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
@@ -32,7 +38,13 @@ namespace helios {
         this->rateLimit = std::make_shared<rateLimitStruct>();
         this->rateLimit->rateLimitGlobal = std::make_unique<rateLimitGlobal>(globalRateLimit);
 
-        const json getGateway = json::parse(request::httpsRequest("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token));
+        std::promise<json> getGatewayPromise;
+        httpRequest getGatewayReq("discord.com", "/api/gateway/bot", {}, boost::beast::http::verb::get, this->rateLimit, token, [&getGatewayPromise](const http::response<http::string_body>& res_)  {
+            getGatewayPromise.set_value(json::parse(res_.body()));
+        });
+        request::sendHttpRequest(getGatewayReq);
+        json getGateway = getGatewayPromise.get_future().get();
+
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
@@ -525,7 +537,7 @@ namespace helios {
     [[maybe_unused]] void client::setLargeThreshold(const int userInputThreshold) {
         this->large_threshold = userInputThreshold;
     }
-
+/*
     applicationRoleConnectionMetadata
     client::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(
             const long &applicationId) {
@@ -540,16 +552,21 @@ namespace helios {
         return helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData
                 (nlohmann::json::parse(request::httpsRequest("discord.com", "/api/applications/" + std::to_string(applicationId) + "/role-connections/metadata", "", boost::beast::http::verb::put, client->rateLimit, client->botToken)));
     }
-
-    channel client::channelOptions::get(const long &channelId, const bool &cacheObject) const {
-        channel reqChannel = channel::getChannelData(json::parse(request::httpsRequest("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, client->rateLimit, client->botToken)));
-        reqChannel.botToken = client->botToken;
-        reqChannel.shard = client->threadMap[std::this_thread::get_id()];
-        reqChannel.rateLimit = client->rateLimit;
-        return reqChannel;
+*/
+    std::future<channel> client::channelOptions::get(const long &channelId, const bool &cacheObject) const {
+        std::promise<channel> channelPromise;
+        httpRequest getChannelReq("discord.com", "/api/channels/" + std::to_string(channelId), {}, boost::beast::http::verb::get, client->rateLimit, client->botToken, [&channelPromise, this](const http::response<http::string_body>& res_)  {
+            channel reqChannel = channel::getChannelData(json::parse(res_.body()));
+            reqChannel.botToken = client->botToken;
+            reqChannel.shard = client->threadMap[std::this_thread::get_id()];
+            reqChannel.rateLimit = client->rateLimit;
+            channelPromise.set_value(reqChannel);
+        });
+        request::sendHttpRequest(getChannelReq);
+        return channelPromise.get_future();
     }
 
-
+/*
     guild client::guildOptions::createGuild(const helios::guild &guildOptions, const std::vector<role> &roles, const std::vector<channel> &channels) {
         json createGuildPayload;
         if(guildOptions.name.has_value()) createGuildPayload["name"] = guildOptions.name.value();
@@ -613,7 +630,6 @@ namespace helios {
         const std::string newGuild = request::httpsRequest("discord.com", "/api/guilds", createGuildPayload.dump(), boost::beast::http::verb::post, client->rateLimit, client->botToken);
         return guild::getGuildData(json::parse(newGuild));
     }
-
     guild client::guildOptions::getGuild(const long& guildId, const bool& withCounts, const bool& cacheObject) const {
         json payload;
         payload["with_counts"] = withCounts;
@@ -623,5 +639,6 @@ namespace helios {
         }
         return guild::getGuildData(json::parse(newGuild));
     }
+    */
 } // helios
 

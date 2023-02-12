@@ -83,8 +83,7 @@ namespace helios {
 
         if(jsonData.contains("reactions")) {
             for (const nlohmann::basic_json<> &reaction: jsonData["reactions"]) {
-                messageData.reactions[std::stol(
-                        reaction["emoji"]["id"].get<std::string>())] = reaction::getReactionData(reaction);
+                messageData.reactions.emplace_back(reaction::getReactionData(reaction));
             }
         }
 

@@ -8,29 +8,48 @@
 #include <algorithm>
 #include <boost/beast/http.hpp>
 #include <nlohmann/json.hpp>
+#include <boost/beast/http.hpp>
 #include "discordClasses/channel/attachment.hpp"
 
+using nlohmann::json;
+namespace http = boost::beast::http;
+
+struct rateLimitStruct;
 class httpRequest {
 public:
+    explicit httpRequest(const std::string& host, const std::string& target, const json& payload, const boost::beast::http::verb& method,const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::string& reason, const std::function<void(http::response<http::string_body>)>& onResponse);
+    explicit httpRequest(const std::string& host, const std::string& target, const json& payload, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::function<void(http::response<http::string_body>)>& onResponse);
+    explicit httpRequest(const std::string& host, const std::string& target, const json& jsonPayload, const std::vector<helios::attachment>& attachments, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::string& reason, const std::function<void(http::response<http::string_body>)>& onResponse);
+    explicit httpRequest(const std::string& host, const std::string& target, const json& jsonPayload, const std::vector<helios::attachment>& attachments, const boost::beast::http::verb& method, const std::shared_ptr<rateLimitStruct>& rateLimit, const std::string& authorization, const std::function<void(http::response<http::string_body>)>& onResponse);
+
     std::string host;
     std::string target;
+    int version = 11;
+    std::string port = "443";
     nlohmann::json payload;
-    boost::beast::http::verb method;;
+    http::verb method;
     std::string authorization;
     std::string reason;
     std::vector<helios::attachment> attachments;
+    std::shared_ptr<rateLimitStruct> rateLimit;
+    std::function<void(http::response<http::string_body>)> onResponse;
+};
 
-    explicit httpRequest(const std::string& host, const std::string& target, const nlohmann::json& payload, const boost::beast::http::verb& method, const std::string& authorization, const std::string& reason, const std::vector<helios::attachment>& attachments);
+class rateLimitHeaders {
+    std::string bucket;
+    int requestsRemaining;
+    float resetAfter;
+    bool global;
+    std::string scope;
 };
 
 class rateLimitEndpoint {
 private:
-    std::string bucket;
+    std::unordered_map<std::string, rateLimitHeaders> rateLimitHeaderMap;
 public:
     rateLimitEndpoint();
     void putRateLimit(const std::string& endpoint, boost::beast::http::response<boost::beast::http::string_body> response);
     void getRateLimit(const std::string& endpoint);
-
 };
 
 class rateLimitGlobal {

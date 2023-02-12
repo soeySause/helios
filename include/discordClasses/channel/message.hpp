@@ -86,7 +86,7 @@ namespace helios {
         std::unordered_map<long, channelMention> mentionChannels;
         std::vector <attachment> attachments;
         std::vector <embed> embeds;
-        std::unordered_map <long, reaction> reactions;
+        std::vector <reaction> reactions;
         std::optional<std::string> nonce;
         std::optional<bool> pinned;
         std::optional<long> webhookId;
