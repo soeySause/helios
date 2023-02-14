@@ -126,6 +126,7 @@ void request::sendHttpRequest(const httpRequest& reqInfo) {
     load_root_certificates(ctx);
     ctx.set_verify_mode(ssl::verify_peer);
     std::make_shared<request>(ioc, ctx, reqInfo)->run();
+    ioc.run();
 }
 
 std::string request::urlEncode(const std::string &value) {

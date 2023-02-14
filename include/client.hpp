@@ -71,6 +71,7 @@ namespace helios {
     struct shardStruct {
         int shardId{};
         int seq = 0;
+        int ioContextId = 0;
         std::vector<std::time_t> sentMessageTimestamp;
 
         bool running = false;
@@ -84,10 +85,8 @@ namespace helios {
         std::thread::id shardThreadId;
 
         bool receivedHeartbeat = true;
-        std::promise<bool> exitHeartbeat;
-        std::future<bool> exitHeartbeatFuture = exitHeartbeat.get_future();
-        std::unique_ptr<std::thread> heartbeatThread;
-        std::thread::id heartbeatThreadId;
+        std::unique_ptr<boost::asio::strand<boost::asio::io_context::executor_type>> heartbeatIoContextStrand;
+        std::unique_ptr<boost::asio::steady_timer> heartbeatIntervalTimer;
         std::optional<int> heartbeatInterval;
 
         std::string sessionId;
@@ -121,20 +120,22 @@ namespace helios {
         int intents = 2097151;
 
         std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
+        boost::asio::io_context ioContext;
         std::condition_variable updateCondition;
         std::mutex mutex;
 
         void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
         static void stopHeartbeatCycle(const std::shared_ptr<shard>& shard);
-        void heartbeatCycle(const std::shared_ptr<shard>& shard);
         static void sendHeartbeat(const std::shared_ptr<shard>& shard);
         void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
         void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
         static bool sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload);
+        void onReceiveData(const boost::system::error_code& ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard, const std::string& data);
 
         json getIdentifyPayload(const int& shard);
     protected:
         int shards;
+        int numberOfIoContext;
         bool enableSharding = false;
 
         ssl::context sslContext{ssl::context::tlsv12_client};

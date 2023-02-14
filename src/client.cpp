@@ -21,6 +21,9 @@ namespace helios {
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
+
+        this->numberOfIoContext = shards/2;
+        if(shards%2 == 1) numberOfIoContext++;
     }
 
     client::client(const std::string& token, const std::map<std::string, int>& options) {
@@ -48,6 +51,9 @@ namespace helios {
         this->shards = getGateway["shards"];
         this->maxConcurrency = getGateway["session_start_limit"]["max_concurrency"];
         this->host = getGateway["url"].get<std::string>().substr(6, getGateway["url"].get<std::string>().length() - 6);
+
+        this->numberOfIoContext = shards/2;
+        if(shards%2 == 1) numberOfIoContext++;
     }
 
     [[maybe_unused]] [[noreturn]] void client::run() {
@@ -64,6 +70,7 @@ namespace helios {
             throw(helios::heliosException(10, "No shards defined"));
         }
 
+        //this->ioContext.run();
         std::unique_lock<std::mutex> lock(mutex);
         for(auto& shard : this->shardClass) {
             shard->shardStructPtr->running = true;
@@ -139,7 +146,6 @@ namespace helios {
         shardR->shardStructPtr.swap(newShardStructPtr);
         this->createWsShard(shardR);
     }
-
     void client::fullReconnectShard(const std::shared_ptr<shard>& shardR) {
         if(shardR->shardStructPtr->shardThread->joinable()) {
             shardR->shardStructPtr->shardThread->join();
@@ -151,7 +157,6 @@ namespace helios {
         shardR->shardStructPtr.swap(newShardStructPtr);
         this->createWsShard(shardR);
     }
-
     void client::deleteShard(const std::shared_ptr<shard>& shardR) {
         if(shardR->shardStructPtr->shardThread->joinable()) {
             shardR->shardStructPtr->shardThread->join();
@@ -170,7 +175,6 @@ namespace helios {
             throw(heliosException(81, error));
         }
     }
-
     void client::createWsShard(const std::shared_ptr<shard>& shard) {
         std::unique_ptr<std::thread> newWsShard;
         if(shard->shardStructPtr->reconnect) {
@@ -197,13 +201,10 @@ namespace helios {
     }
 
     void client::wsShard(const std::string &connectedHost, const std::shared_ptr<shard>& shard) {
-        net::io_context ioContext;
-        std::shared_ptr<session> sessionShard = std::make_shared<session>(ioContext, this->sslContext);
+        boost::asio::strand<boost::asio::io_context::executor_type> strand(this->ioContext.get_executor());
 
+        std::shared_ptr<session> sessionShard = std::make_shared<session>(this->ioContext, this->sslContext, shard, std::bind(&client::onReceiveData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
         shard->shardStructPtr->sessionShard = sessionShard->weak_from_this();
-
-        sessionShard->run(connectedHost, "443");
-        ioContext.run();
 
         if(shard->shardStructPtr->reconnect) {
             json reconnectingPayload;
@@ -214,26 +215,30 @@ namespace helios {
             client::sendGatewayMessage(shard, reconnectingPayload.dump());
         }
 
-        while (sessionShard->is_socket_open()) {
-            ioContext.restart();
-            sessionShard->enable_async_read();
+        boost::asio::post(strand, [&](){
+            sessionShard->run(connectedHost, "443");
+        });
 
-            const std::string wsResponse = sessionShard->getResponse();
-            std::cout << wsResponse << std::endl;
-            this->parseResponse(shard, wsResponse);
+        this->ioContext.run();
+/*
+        const std::string wsResponse = sessionShard->getResponse();
+        std::cout << wsResponse << std::endl;
+        this->parseResponse(shard, wsResponse);
 
-            ioContext.run();
-        }
 
         // After this point, the connection is closed and cannot be reopened without creating a new session
-        if(!ioContext.stopped()) ioContext.stop();
-
         shard->shardStructPtr->closeCode = sessionShard->getCloseCode();
         shard->shardStructPtr->closeReason = sessionShard->getCloseReason();
         shard->shardStructPtr->exit.set_value(true);
         stopHeartbeatCycle(shard);
 
-        this->updateCondition.notify_one();
+        this->updateCondition.notify_one();*/
+    }
+    void client::onReceiveData(const boost::system::error_code &ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard, const std::string &data) {
+        boost::ignore_unused(bytes_transferred);
+        if (ec) return fail(ec, "response");
+        std::cout << data << std::endl;
+        this->parseResponse(this->shardClass.at(0), data);
     }
 
     void client::parseResponse(const std::shared_ptr<shard>& shard, const std::string& response)
@@ -288,7 +293,7 @@ namespace helios {
             const std::string& executeEvent = event;
 
             if(executeEvent == "ON_ENABLE"){
-                startHeartbeatCycle(shard);
+                //startHeartbeatCycle(shard);
                 if(!shard->shardStructPtr->reconnect) {
                     json identifyPayload = getIdentifyPayload(shard->shardStructPtr->shardId);
                     client::sendGatewayMessage(shard, identifyPayload.dump());
@@ -326,8 +331,6 @@ namespace helios {
                 sessionShard->asyncCloseSession();
                 return;
             }
-
-
 
             if(executeEvent == "CHANNEL_CREATE"){
                 if(this->onEvent.channelCreateFunction) {
@@ -392,22 +395,43 @@ namespace helios {
     }
 
     void client::startHeartbeatCycle(const std::shared_ptr<shard>& shard) {
-        std::unique_ptr<std::thread> heartbeatThread;
+        if(!shard->shardStructPtr->heartbeatInterval.has_value()) {
+            throw(heliosException(60, "Failed to start heartbeat. No heartbeat interval found"));
+        }
 
-        heartbeatThread = std::make_unique<std::thread>(&client::heartbeatCycle, this, shard);
-        shard->shardStructPtr->heartbeatThread.swap(heartbeatThread);
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dis(0, 1);
 
-        shard->shardStructPtr->heartbeatThreadId = shard->shardStructPtr->heartbeatThread->get_id();
+        double randomNumber = dis(gen);
+        double jitter = randomNumber * shard->shardStructPtr->heartbeatInterval.value();
+        shard->shardStructPtr->heartbeatIntervalTimer->expires_from_now(std::chrono::milliseconds((int)jitter));
+        std::cout << (int)jitter << std::endl;
+        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
+
+        /*auto &ioc = *this->ioContextMap[shard->shardStructPtr->ioContextId]->ioContext;
+        shard->shardStructPtr->heartbeatIntervalTimer->async_wait(
+            boost::asio::bind_executor(ioc.get_executor(), [&shard, sessionShard](const boost::system::error_code& ec) {
+                if (ec == boost::asio::error::operation_aborted) {
+                    return;
+                }
+                if(ec) throw(heliosException(ec.value(), ec.what()));
+                helios::client::sendHeartbeat(shard);
+
+                if(!shard->shardStructPtr->receivedHeartbeat) {
+                    sessionShard->asyncCloseSession(websocket::close_code::abnormal);
+                    return;
+                }
+
+                shard->shardStructPtr->receivedHeartbeat = false;
+                shard->shardStructPtr->heartbeatIntervalTimer->expires_at(shard->shardStructPtr->heartbeatIntervalTimer->expiry() + std::chrono::milliseconds(shard->shardStructPtr->heartbeatInterval.value()));
+                //resend heartbeat
+            })
+        );*/
     }
 
     void client::stopHeartbeatCycle(const std::shared_ptr<shard>& shard) {
-            if(shard->shardStructPtr->heartbeatThreadId == std::thread::id()) return;
-            if(shard->shardStructPtr->shardThreadId == std::this_thread::get_id()) {
-            shard->shardStructPtr->exitHeartbeat.set_value(true);
-            if(shard->shardStructPtr->heartbeatThread->joinable()) {
-                shard->shardStructPtr->heartbeatThread->join();
-            }
-        }
+        shard->shardStructPtr->heartbeatIntervalTimer->cancel();
     }
 
     void client::sendHeartbeat(const std::shared_ptr<shard>& shard)
@@ -419,40 +443,6 @@ namespace helios {
         std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
         client::sendGatewayMessage(shard, heartbeatPayload.dump());
     }
-
-    void client::heartbeatCycle(const std::shared_ptr<shard>& shard)
-    {
-        if(!shard->shardStructPtr->heartbeatInterval.has_value()) {
-            throw(heliosException(60, "Failed to start heartbeat. No heartbeat interval found"));
-        }
-
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dis(0, 1);
-
-        double randomNumber = dis(gen);
-        double jitter = randomNumber * shard->shardStructPtr->heartbeatInterval.value();
-        if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds((int)jitter)) == std::future_status::ready) {
-            return;
-        }
-        std::shared_ptr<session> sessionShard = shard->shardStructPtr->sessionShard.lock();
-
-        while (true) {
-            this->sendHeartbeat(shard);
-
-            // If program receivedHeartbeat is false, program never received ack and must restart
-            if(!shard->shardStructPtr->receivedHeartbeat) {
-                sessionShard->asyncCloseSession(websocket::close_code::abnormal);
-                break;
-            }
-
-            shard->shardStructPtr->receivedHeartbeat = false;
-            if (shard->shardStructPtr->exitHeartbeatFuture.wait_for(std::chrono::milliseconds(shard->shardStructPtr->heartbeatInterval.value())) == std::future_status::ready) {
-                break;
-            }
-        }
-    }
-
 
     json client::getIdentifyPayload(const int& shard) {
         json identifyPayload;
@@ -537,6 +527,7 @@ namespace helios {
     [[maybe_unused]] void client::setLargeThreshold(const int userInputThreshold) {
         this->large_threshold = userInputThreshold;
     }
+
 /*
     applicationRoleConnectionMetadata
     client::applicationRoleConnectionMetadataOptions::getApplicationRoleConnectionMetadataRecords(
@@ -565,7 +556,6 @@ namespace helios {
         request::sendHttpRequest(getChannelReq);
         return channelPromise.get_future();
     }
-
 /*
     guild client::guildOptions::createGuild(const helios::guild &guildOptions, const std::vector<role> &roles, const std::vector<channel> &channels) {
         json createGuildPayload;

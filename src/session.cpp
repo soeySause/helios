@@ -1,6 +1,8 @@
 #include "heliosException.hpp"
 #include "session.hpp"
 
+#include <utility>
+
 // Report a failure
 void fail(beast::error_code ec, char const* what)
 {
@@ -11,8 +13,10 @@ void fail(beast::error_code ec, char const* what)
 }
 
 // Resolver and socket require an io_context
-session::session(net::io_context& ioc, ssl::context& ctx)
+session::session(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<helios::shard> shard, callback_t callback)
         : resolver_(net::make_strand(ioc))
+        , currentShard(std::move(shard))
+        , callback_(std::move(callback))
         , timer_(ioc)
         , ws_(net::make_strand(ioc), ctx){};
 
@@ -129,26 +133,24 @@ void session::on_handshake(beast::error_code ec)
 
 }
 
-void session::on_write(
-        beast::error_code ec,
-        std::size_t bytes_transferred)
+void session::on_write(beast::error_code ec, std::size_t bytes_transferred)
 {
     boost::ignore_unused(bytes_transferred);
-    if(ec)
-        throw(helios::heliosException(1, "write: " + ec.what()));
-
+    if(ec) throw(helios::heliosException(1, "write: " + ec.what()));
     queue_.erase(queue_.begin());
 
+    ws_.async_read(
+            buffer_,
+            beast::bind_front_handler(
+                    &session::on_read,
+                    shared_from_this()));
 }
 
-void session::on_read(
-        beast::error_code ec,
-        std::size_t bytes_transferred) {
+void session::on_read(beast::error_code ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
-
     if (ec) return fail(ec, "read");
 
-    responseString = beast::buffers_to_string(buffer_.data());
+    this->callback_(ec, bytes_transferred, this->currentShard, beast::buffers_to_string(buffer_.data()));
     buffer_.consume(buffer_.size());
 
     currentlyQueued_ = false;
@@ -182,36 +184,24 @@ bool session::is_socket_open()
     return ws_.is_open();
 }
 
-void session::enable_async_read() {
-    ws_.async_read(
-            buffer_,
-            beast::bind_front_handler(
-                    &session::on_read,
-                    shared_from_this()));
-}
-
 void session::asyncQueue(const std::string& payload) {
-    //If something to write, add to back of queue
     if(!payload.empty()) {
         queue_.emplace_back(payload);
     }
 
-    if(queue_.empty()) return;
+    if(queue_.empty()) {
+        ws_.async_read(buffer_,
+                beast::bind_front_handler(
+                        &session::on_read,
+                        shared_from_this()));
+    };
 
-    // If there is something to write, write it.
     if(!currentlyQueued_) {
         currentlyQueued_ = true;
-
         ws_.async_write(
                 net::buffer(queue_.at(0)),
                 beast::bind_front_handler(
                         &session::on_write,
                         shared_from_this()));
-
     }
-}
-
-std::string session::getResponse()
-{
-    return responseString;
 }
