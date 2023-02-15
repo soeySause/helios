@@ -80,12 +80,12 @@ namespace helios {
         bool deleteShard = false;
 
         eventData eventData;
-        std::weak_ptr<session> sessionShard;
+        std::shared_ptr<session> sessionShard;
         std::unique_ptr<std::thread> shardThread;
         std::thread::id shardThreadId;
+        boost::asio::io_context ioContext;
 
         bool receivedHeartbeat = true;
-        std::unique_ptr<boost::asio::strand<boost::asio::io_context::executor_type>> heartbeatIoContextStrand;
         std::unique_ptr<boost::asio::steady_timer> heartbeatIntervalTimer;
         std::optional<int> heartbeatInterval;
 
@@ -98,6 +98,13 @@ namespace helios {
         std::uint16_t closeCode{};
     };
 
+    class sharedInfo {
+        std::string botToken;
+        std::shared_ptr<rateLimitStruct> rateLimit;
+        std::unordered_map<std::thread::id, int> threadMap;
+        std::shared_ptr<boost::asio::thread_pool> threadPool;
+    };
+
     class shard {
     private:
         friend class client;
@@ -106,6 +113,12 @@ namespace helios {
     public:
         [[maybe_unused]] void deleteShard();
         [[maybe_unused]] void reconnect();
+    };
+
+    class strands {
+    private:
+        friend class client;
+        std::vector<std::shared_ptr<boost::asio::io_context::executor_type>> strandVector;
     };
 
     class client {
@@ -120,7 +133,7 @@ namespace helios {
         int intents = 2097151;
 
         std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
-        boost::asio::io_context ioContext;
+        std::shared_ptr<boost::asio::thread_pool> threadPool;
         std::condition_variable updateCondition;
         std::mutex mutex;
 
@@ -131,11 +144,10 @@ namespace helios {
         void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
         static bool sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload);
         void onReceiveData(const boost::system::error_code& ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard, const std::string& data);
-
+        void onSessionClose(const boost::system::error_code& ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard);
         json getIdentifyPayload(const int& shard);
     protected:
         int shards;
-        int numberOfIoContext;
         bool enableSharding = false;
 
         ssl::context sslContext{ssl::context::tlsv12_client};

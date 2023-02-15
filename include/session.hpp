@@ -38,12 +38,15 @@ class session : public std::enable_shared_from_this<session>
     std::vector <bool> readingQueue_;
     std::string responseString;
     using callback_t = std::function<void(const boost::system::error_code&, std::size_t, const std::shared_ptr<helios::shard> fromShard, const std::string&)>;
-    callback_t callback_;
+    using callback_c = std::function<void(const boost::system::error_code&, std::size_t, const std::shared_ptr<helios::shard> fromShard)>;
+    callback_t callback_t_;
+    callback_c callback_c_;
     std::shared_ptr<helios::shard> currentShard;
     bool currentlyQueued_ = true;
+    bool currentlyReading_ = true;
 
 public:
-    explicit session(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<helios::shard> shard, callback_t callback);
+    explicit session(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<helios::shard> shard, callback_t callback_t, callback_c callback_c);
     void run(const std::basic_string<char, std::char_traits<char>, std::allocator<char>>& host, char const* port);
     void on_resolve(beast::error_code ec, const tcp::resolver::results_type& results);
     void on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type& ep);

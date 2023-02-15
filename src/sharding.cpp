@@ -59,10 +59,9 @@ namespace helios {
 
     [[maybe_unused]] void shard::deleteShard() {
         if(this->shardStructPtr->running) {
-            std::shared_ptr<session> sessionShard = this->shardStructPtr->sessionShard.lock();
-            if (sessionShard) {
+            if (this->shardStructPtr->sessionShard) {
                 this->shardStructPtr->deleteShard = true;
-                sessionShard->asyncCloseSession();
+                this->shardStructPtr->sessionShard->asyncCloseSession();
             } else {
                 throw(heliosException(83, "Error deleting shard. Missing websocket connection."));
             }
@@ -73,10 +72,9 @@ namespace helios {
 
     void shard::reconnect() {
         if(this->shardStructPtr->running) {
-            std::shared_ptr<session> sessionShard = this->shardStructPtr->sessionShard.lock();
-            if (sessionShard) {
+            if (this->shardStructPtr->sessionShard) {
                 this->shardStructPtr->fullReconnect = true;
-                sessionShard->asyncCloseSession();
+                this->shardStructPtr->sessionShard->asyncCloseSession();
             } else {
                 throw(heliosException(83, "Error reconnecting shard. Missing websocket connection."));
             }

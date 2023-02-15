@@ -13,10 +13,11 @@ void fail(beast::error_code ec, char const* what)
 }
 
 // Resolver and socket require an io_context
-session::session(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<helios::shard> shard, callback_t callback)
+session::session(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<helios::shard> shard, callback_t callback_t, callback_c callback_c)
         : resolver_(net::make_strand(ioc))
         , currentShard(std::move(shard))
-        , callback_(std::move(callback))
+        , callback_t_(std::move(callback_t))
+        , callback_c_(std::move(callback_c))
         , timer_(ioc)
         , ws_(net::make_strand(ioc), ctx){};
 
@@ -29,9 +30,7 @@ void session::run(
     host_ = host;
 
     // Look up the domain name
-    resolver_.async_resolve(
-            host,
-            port,
+    resolver_.async_resolve(host, port,
             beast::bind_front_handler(
                     &session::on_resolve,
                     shared_from_this()));
@@ -121,8 +120,7 @@ void session::on_ssl_handshake(beast::error_code ec)
 
 void session::on_handshake(beast::error_code ec)
 {
-    if(ec)
-        throw(helios::heliosException(1, "handshake: " + ec.what()));
+    if(ec) throw(helios::heliosException(1, "handshake: " + ec.what()));
 
     // Send the message
     ws_.async_read(
@@ -139,26 +137,31 @@ void session::on_write(beast::error_code ec, std::size_t bytes_transferred)
     if(ec) throw(helios::heliosException(1, "write: " + ec.what()));
     queue_.erase(queue_.begin());
 
-    ws_.async_read(
-            buffer_,
-            beast::bind_front_handler(
-                    &session::on_read,
-                    shared_from_this()));
+    if(!currentlyReading_) {
+        currentlyReading_ = true;
+        ws_.async_read(
+                buffer_,
+                beast::bind_front_handler(
+                        &session::on_read,
+                        shared_from_this()));
+    }
 }
 
 void session::on_read(beast::error_code ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
-    if (ec) return fail(ec, "read");
+    if (ec) return callback_c_(ec, bytes_transferred, this->currentShard);
 
-    this->callback_(ec, bytes_transferred, this->currentShard, beast::buffers_to_string(buffer_.data()));
+    this->callback_t_(ec, bytes_transferred, this->currentShard, beast::buffers_to_string(buffer_.data()));
     buffer_.consume(buffer_.size());
 
     currentlyQueued_ = false;
+    currentlyReading_ = false;
     asyncQueue();
 }
 
 void session::onClose(beast::error_code ec) {
-    if(ec) return fail(ec, "close");
+    if(ec) throw(helios::heliosException(1, "write: " + ec.what()));
+    this->callback_c_(ec, 0, this->currentShard);
 };
 
 void session::asyncCloseSession(const websocket::close_code& closeCode)
@@ -190,10 +193,12 @@ void session::asyncQueue(const std::string& payload) {
     }
 
     if(queue_.empty()) {
+        currentlyReading_ = true;
         ws_.async_read(buffer_,
                 beast::bind_front_handler(
                         &session::on_read,
                         shared_from_this()));
+        return;
     };
 
     if(!currentlyQueued_) {
@@ -203,5 +208,6 @@ void session::asyncQueue(const std::string& payload) {
                 beast::bind_front_handler(
                         &session::on_write,
                         shared_from_this()));
+        return;
     }
 }
