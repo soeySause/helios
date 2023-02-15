@@ -23,8 +23,8 @@ namespace helios {
 
     class invite {
         std::optional<std::string> code;
-        std::unique_ptr<guild> guild;
-        std::unique_ptr<channel> channel;
+        //std::unique_ptr<guild> guild;
+        //std::unique_ptr<channel> channel;
         user inviter;
         std::optional<int> targetType;
         user targetUser;

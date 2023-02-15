@@ -20,7 +20,7 @@
 #include "event.hpp"
 #include "cache.hpp"
 #include "request.hpp"
-#include "discordClassses/discordClasses.hpp"
+#include "discordClasses/discordClasses.hpp"
 #include "heliosException.hpp"
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
@@ -71,21 +71,22 @@ namespace helios {
     struct shardStruct {
         int shardId{};
         int seq = 0;
+        int ioContextId = 0;
+        std::vector<std::time_t> sentMessageTimestamp;
+
         bool running = false;
         bool reconnect = false;
         bool fullReconnect = false;
         bool deleteShard = false;
 
         eventData eventData;
-        std::weak_ptr<session> sessionShard;
+        std::shared_ptr<session> sessionShard;
         std::unique_ptr<std::thread> shardThread;
         std::thread::id shardThreadId;
+        boost::asio::io_context ioContext;
 
         bool receivedHeartbeat = true;
-        std::promise<bool> exitHeartbeat;
-        std::future<bool> exitHeartbeatFuture = exitHeartbeat.get_future();
-        std::unique_ptr<std::thread> heartbeatThread;
-        std::thread::id heartbeatThreadId;
+        std::unique_ptr<boost::asio::steady_timer> heartbeatIntervalTimer;
         std::optional<int> heartbeatInterval;
 
         std::string sessionId;
@@ -95,6 +96,13 @@ namespace helios {
         std::future<bool> exitFuture = exit.get_future();
         beast::static_string<123, char> closeReason;
         std::uint16_t closeCode{};
+    };
+
+    class sharedInfo {
+        std::string botToken;
+        std::shared_ptr<rateLimitStruct> rateLimit;
+        std::unordered_map<std::thread::id, int> threadMap;
+        std::shared_ptr<boost::asio::thread_pool> threadPool;
     };
 
     class shard {
@@ -107,10 +115,17 @@ namespace helios {
         [[maybe_unused]] void reconnect();
     };
 
+    class strands {
+    private:
+        friend class client;
+        std::vector<std::shared_ptr<boost::asio::io_context::executor_type>> strandVector;
+    };
+
     class client {
     private:
         std::string host;
         std::string botToken;
+        std::shared_ptr<rateLimitStruct> rateLimit;
         int maxConcurrency;
 
         bool compress = false;
@@ -118,16 +133,18 @@ namespace helios {
         int intents = 2097151;
 
         std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
+        std::shared_ptr<boost::asio::thread_pool> threadPool;
         std::condition_variable updateCondition;
         std::mutex mutex;
 
         void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
         static void stopHeartbeatCycle(const std::shared_ptr<shard>& shard);
-        void heartbeatCycle(const std::shared_ptr<shard>& shard);
         static void sendHeartbeat(const std::shared_ptr<shard>& shard);
         void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
         void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
-
+        static bool sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload);
+        void onReceiveData(const boost::system::error_code& ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard, const std::string& data);
+        void onSessionClose(const boost::system::error_code& ec, std::size_t bytes_transferred, const std::shared_ptr<shard>& shard);
         json getIdentifyPayload(const int& shard);
     protected:
         int shards;
@@ -143,6 +160,7 @@ namespace helios {
 
     public:
         explicit client(const std::string& token);
+        explicit client(const std::string& token, const std::map<std::string, int>& options);
 
         class applicationRoleConnectionMetadataOptions {
         private:
@@ -152,18 +170,16 @@ namespace helios {
             [[maybe_unused]] applicationRoleConnectionMetadata getApplicationRoleConnectionMetadataRecords(const long& applicationId);
             [[maybe_unused]] applicationRoleConnectionMetadata updateApplicationRoleConnectionMetadataRecords(const long& applicationId);
         };
-
         class channelOptions {
         private:
             friend class client;
             client *client;
         public:
             [[maybe_unused]] channel create(const channel& channelOptions);
-            [[maybe_unused]] [[nodiscard]] channel get(const long& channelId, const bool& cacheObject = true) const;
+            [[maybe_unused]] [[nodiscard]] std::future<channel> get(const long& channelId, const bool& cacheObject = true) const;
             [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
             [[maybe_unused]] bool existsInCache(const long& guildId) const;
         };
-
         class guildOptions {
         private:
             friend class client;

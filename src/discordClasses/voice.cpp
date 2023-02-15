@@ -1,4 +1,4 @@
-#include "discordClassses/voice.hpp"
+#include "discordClasses/voice.hpp"
 
 helios::voiceState helios::voiceState::getVoiceStateData(const nlohmann::json& jsonData) {
     voiceState voiceStateData;

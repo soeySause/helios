@@ -1,4 +1,4 @@
-#include "discordClassses/sticker.hpp"
+#include "discordClasses/sticker.hpp"
 #include <iostream>
 
 namespace helios {

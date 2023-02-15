@@ -1,4 +1,4 @@
-#include "discordClassses/guildScheduledEvent.hpp"
+#include "discordClasses/guildScheduledEvent.hpp"
 
 namespace helios {
 } // helios

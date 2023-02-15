@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <functional>
 #include "request.hpp"
-#include "discordClassses/discordClasses.hpp"
+#include "discordClasses/discordClasses.hpp"
 
 using json = nlohmann::json;
 using namespace boost::archive;

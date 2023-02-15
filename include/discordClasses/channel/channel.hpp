@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <future>
 #include <fstream>
 #include <boost/beast/core/string.hpp>
 #include <nlohmann/json.hpp>
@@ -97,6 +98,7 @@ namespace helios {
 
         std::optional<std::string> botToken;
         std::optional<int> shard;
+        std::shared_ptr<rateLimitStruct> rateLimit;
         static channel getChannelData(const json& jsonData);
     public:
         std::optional<long> id;
@@ -139,7 +141,7 @@ namespace helios {
         [[maybe_unused]] [[nodiscard]] std::unordered_map<long, message> getMessages(const std::map<std::string, std::string>& options = {}) const;
         [[maybe_unused]] [[nodiscard]] message getMessage(const long& messageId) const;
         [[maybe_unused]] message createMessage(const message& newMessage = helios::message());
-        [[maybe_unused]] message createMessage(const std::string& message);
+        [[maybe_unused]] std::future<message> createMessage(const std::string& message);
         [[maybe_unused]] message createMessage(const embed& embed);
         [[maybe_unused]] message createMessage(const std::vector<embed>& embeds);
         [[maybe_unused]] message createMessage(const attachment& attachment);
@@ -177,8 +179,6 @@ namespace helios {
         [[maybe_unused]] void unpinMessage(const long& messageId, const std::string& reason = "");
         [[maybe_unused]] void groupDmAddRecipient(const long& userId, const std::string& accessToken, const std::string& nick);
         [[maybe_unused]] void groupDmRemoveRecipient(const long& userId);
-
-
     };
 } // helios
 

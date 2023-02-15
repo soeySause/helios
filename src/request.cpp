@@ -1,67 +1,132 @@
 #include "request.hpp"
 
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace net = boost::asio;            // from <boost/asio.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-using json = nlohmann::json;
+// Report a failure
+void request::fail(beast::error_code ec, char const* what) {
+    std::cerr << what << ": " << ec.message() << "\n";
+}
 
-int request::httpsResponseCode;
-std::string request::httpsResponseReason;
+// Performs an HTTP GET and prints the response
+request::request(net::io_context &ioc, ssl::context &ctx, const httpRequest& reqInfo)
+: resolver_(ioc)
+, reqInfo_(reqInfo)
+, stream_(ioc, ctx) {}
 
 
-std::string request::httpsRequest(const std::string& host, const std::string& target, const json& payload, const http::verb& method, const std::string& authorization, const std::string& reason) {
-    typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
+void request::run() {
+    if(! SSL_set_tlsext_host_name(stream_.native_handle(), this->reqInfo_.host.c_str())) {
+        beast::error_code ec{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
+        std::cerr << ec.message() << "\n";
+        return;
+    }
 
-    ssl::context ctx(ssl::context::sslv23);
+    this->req_.version(this->reqInfo_.version);
+    this->req_.target(this->reqInfo_.target);
+    this->req_.set(http::field::host, this->reqInfo_.host);
+    this->req_.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    this->req_.method(this->reqInfo_.method);
+    this->req_.set(http::field::content_type, "application/json");
+
+    if (!this->reqInfo_.authorization.empty()) req_.set(http::field::authorization, "Bot " + this->reqInfo_.authorization);
+    if (!this->reqInfo_.reason.empty()) this->req_.set("X-Audit-Log-Reason", this->reqInfo_.reason);
+    if (this->reqInfo_.method != http::verb::get) {
+        this->req_.body() = this->reqInfo_.payload.dump();
+        this->req_.prepare_payload();
+    }
+
+    resolver_.async_resolve(this->reqInfo_.host, this->reqInfo_.port,
+            beast::bind_front_handler(
+                    &request::on_resolve,
+                    shared_from_this()));
+}
+
+void request::on_resolve(beast::error_code ec, const tcp::resolver::results_type& results) {
+    if(ec)
+        return fail(ec, "resolve");
+
+    beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
+    beast::get_lowest_layer(stream_).async_connect( results,
+            beast::bind_front_handler(
+                    &request::on_connect,
+                    shared_from_this()));
+}
+
+void request::on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type&) {
+    if(ec)
+        return fail(ec, "connect");
+
+    stream_.async_handshake(
+            ssl::stream_base::client,
+            beast::bind_front_handler(
+                    &request::on_handshake,
+                    shared_from_this()));
+}
+
+void request::on_handshake(beast::error_code ec) {
+    if(ec)
+        return fail(ec, "handshake");
+
+    beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
+    http::async_write(stream_, req_,
+                      beast::bind_front_handler(
+                              &request::on_write,
+                              shared_from_this()));
+}
+
+void request::on_write(beast::error_code ec, std::size_t bytes_transferred) {
+    boost::ignore_unused(bytes_transferred);
+
+    if(ec)
+        return fail(ec, "write");
+
+    http::async_read(stream_, buffer_, res_,
+                     beast::bind_front_handler(
+                             &request::on_read,
+                             shared_from_this()));
+}
+
+void request::on_read(beast::error_code ec, std::size_t bytes_transferred) {
+    boost::ignore_unused(bytes_transferred);
+
+    if(ec)
+        return fail(ec, "read");
+
+    unsigned int httpsResponseCode = res_.result_int();
+    switch (httpsResponseCode) {
+        case (204):
+        case (200): {
+            this->reqInfo_.onResponse(res_);
+            break;
+        };
+        default : {
+            throw (helios::heliosException((int)httpsResponseCode,
+                                           "\nError code: " + std::to_string(httpsResponseCode) +
+                                           "\nEndpoint: " + std::string(boost::beast::http::to_string(req_.method())) + " " + this->reqInfo_.target +
+                                           "\nError message: " + res_.body()));
+        }
+    }
+    beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
+    stream_.async_shutdown(
+            beast::bind_front_handler(
+                    &request::on_shutdown,
+                    shared_from_this()));
+}
+
+void request::on_shutdown(beast::error_code ec) {
+    // Rationale:
+    // http://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
+    if(ec == net::error::eof) ec = {};
+
+    if(ec)
+        return fail(ec, "shutdown");
+}
+
+void request::sendHttpRequest(const httpRequest& reqInfo) {
+    net::io_context ioc;
+    ssl::context ctx{ssl::context::tlsv12_client};
     load_root_certificates(ctx);
-    ctx.set_default_verify_paths();
-
-    net::io_context io_service;
-    ssl_socket sock(io_service, ctx);
-    tcp::resolver resolver(io_service);
-
-    auto const results = resolver.resolve(host, "https");
-    beast::get_lowest_layer(sock).connect(results);
-
-    sock.set_verify_mode(ssl::verify_peer);
-    sock.set_verify_callback(ssl::rfc2818_verification(host));
-    sock.handshake(ssl_socket::client);
-
-    // ... read and write as normal ...
-    http::request<http::string_body> req{method, target, 11};
-
-    req.set(http::field::host, host);
-    req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-    req.set(http::field::content_type, "application/json");
-
-
-    if(!authorization.empty()) req.set(http::field::authorization, "Bot " + authorization);
-    if(!reason.empty()) req.set("X-Audit-Log-Reason", reason);
-    if(method != http::verb::get) {
-        req.body() = payload.dump();
-        req.prepare_payload();
-    }
-
-    // Send the HTTP request to the remote host
-    http::write(sock, req);
-    beast::flat_buffer buffer;
-    http::response<http::string_body> res;
-    http::read(sock, buffer, res);
-
-    request::httpsResponseCode = int((unsigned int)res.result_int());
-    request::httpsResponseReason = res.body();
-
-    if(httpsResponseCode == 204) return "";
-    if(httpsResponseCode != 200) {
-        throw (helios::heliosException(request::httpsResponseCode,
-                                       "\nError code: " + std::to_string(request::httpsResponseCode) +
-                                       "\nEndpoint: " + std::string(boost::beast::http::to_string(req.method())) + " " + target +
-                                       "\nError message: " + request::httpsResponseReason));
-    }
-
-    return res.body();
+    ctx.set_verify_mode(ssl::verify_peer);
+    std::make_shared<request>(ioc, ctx, reqInfo)->run();
+    ioc.run();
 }
 
 std::string request::urlEncode(const std::string &value) {
@@ -78,7 +143,7 @@ std::string request::urlEncode(const std::string &value) {
     return escaped.str();
 }
 
-std::string request::attachmentHttpsRequest(const std::string &host, const std::string &target, const json &jsonPayload, const std::vector<helios::attachment>& attachments, const http::verb &method, const std::string &authorization, const std::string &reason) {
+/*std::string request::attachmentHttpsRequest(const std::string &host, const std::string &target, const json &jsonPayload, const std::vector<helios::attachment>& attachments, const http::verb &method, const std::string &authorization, const std::string &reason) {
     typedef beast::ssl_stream<beast::tcp_stream> ssl_socket;
 
     ssl::context ctx(ssl::context::sslv23);
@@ -152,11 +217,9 @@ std::string request::attachmentHttpsRequest(const std::string &host, const std::
                                        "\nEndpoint: " + std::string(boost::beast::http::to_string(req.method())) + " " + target +
                                        "\nError message: " + request::httpsResponseReason));
     }
-
     return res.body();
-
 }
-
+*/
 std::string request::generateRandomString(const std::size_t& length)
 {
     static constexpr char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -169,3 +232,4 @@ std::string request::generateRandomString(const std::size_t& length)
 
     return result;
 }
+

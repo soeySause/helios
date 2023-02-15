@@ -1,4 +1,4 @@
-#include "discordClassses/guild/role.hpp"
+#include "discordClasses/guild/role.hpp"
 
 namespace helios {
     roleTags roleTags::getRoleTagsData(const nlohmann::json &jsonData) {

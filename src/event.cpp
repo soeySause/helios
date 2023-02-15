@@ -1,5 +1,5 @@
 #include "event.hpp"
-#include "discordClassses/guild/guild.hpp"
+#include "discordClasses/guild/guild.hpp"
 
 namespace helios {
     readyEvent eventData::getReadyEventData(const json &jsonData) {

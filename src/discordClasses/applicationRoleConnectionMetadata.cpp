@@ -1,4 +1,4 @@
-#include "discordClassses/applicationRoleConnectionMetadata.hpp"
+#include "discordClasses/applicationRoleConnectionMetadata.hpp"
 
 helios::applicationRoleConnectionMetadata
 helios::applicationRoleConnectionMetadata::getApplicationRoleConnectionMetadataRecordData(

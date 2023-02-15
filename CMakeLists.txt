@@ -12,7 +12,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem)
 add_executable(heliosTest test/heliosTest1.cpp)
 target_link_libraries(heliosTest helios)
 
-add_library(${PROJECT_NAME} SHARED src/discordClasses/guild/guild.cpp include/discordClassses/guild/guild.hpp src/discordClasses/voice.cpp include/discordClassses/voice.hpp include/discordClassses/invite.hpp src/discordClasses/invite.cpp src/discordClasses/guildScheduledEvent.cpp include/discordClassses/guildScheduledEvent.hpp src/discordClasses/eventFields/presence.cpp include/discordClassses/eventFields/presence.hpp src/discordClasses/eventFields/activity.cpp include/discordClassses/eventFields/activity.hpp "src/discordClasses/stageInstance.cpp" "include/discordClassses/stageInstance.hpp" src/discordClasses/autoModeration.cpp include/discordClassses/autoModeration.hpp src/discordClasses/guildTemplate.cpp include/discordClassses/guildTemplate.hpp src/discordClasses/webhook.cpp include/discordClassses/webhook.hpp src/discordClasses/interactions/applicationCommands.cpp include/discordClassses/interactions/applicationCommands.hpp)
+add_library(${PROJECT_NAME} SHARED src/discordClasses/guild/guild.cpp include/discordClasses/guild/guild.hpp src/discordClasses/voice.cpp include/discordClasses/voice.hpp include/discordClasses/invite.hpp src/discordClasses/invite.cpp src/discordClasses/guildScheduledEvent.cpp include/discordClasses/guildScheduledEvent.hpp src/discordClasses/eventFields/presence.cpp include/discordClasses/eventFields/presence.hpp src/discordClasses/eventFields/activity.cpp include/discordClasses/eventFields/activity.hpp "src/discordClasses/stageInstance.cpp" "include/discordClasses/stageInstance.hpp" src/discordClasses/autoModeration.cpp include/discordClasses/autoModeration.hpp src/discordClasses/guildTemplate.cpp include/discordClasses/guildTemplate.hpp src/discordClasses/webhook.cpp include/discordClasses/webhook.hpp src/discordClasses/interactions/applicationCommands.cpp include/discordClasses/interactions/applicationCommands.hpp src/rateLimit.cpp include/rateLimit.hpp)
 target_sources(${PROJECT_NAME} PRIVATE
         src/client.cpp
         src/session.cpp
@@ -21,42 +21,62 @@ target_sources(${PROJECT_NAME} PRIVATE
         include/request.hpp
         src/sharding.cpp
         src/event.cpp
-        include/heliosException.hpp
         src/cache.cpp
         include/cache.hpp
+        src/rateLimit.cpp
+        include/rateLimit.hpp
+        include/heliosException.hpp
 
         src/discordClasses/application.cpp
-        include/discordClassses/application.hpp
+        include/discordClasses/application.hpp
         src/discordClasses/team.cpp
-        include/discordClassses/team.hpp
+        include/discordClasses/team.hpp
         src/discordClasses/user.cpp
-        include/discordClassses/user.hpp
+        include/discordClasses/user.hpp
         src/discordClasses/applicationRoleConnectionMetadata.cpp
-        include/discordClassses/applicationRoleConnectionMetadata.hpp
-        include/discordClassses/discordClasses.hpp
+        include/discordClasses/applicationRoleConnectionMetadata.hpp
+        include/discordClasses/discordClasses.hpp
         src/discordClasses/auditLog.cpp
-        include/discordClassses/auditLog.hpp
+        include/discordClasses/auditLog.hpp
         src/discordClasses/channel/channel.cpp
-        include/discordClassses/channel/channel.hpp
+        include/discordClasses/channel/channel.hpp
         src/discordClasses/channel/message.cpp
-        include/discordClassses/channel/message.hpp
+        include/discordClasses/channel/message.hpp
         src/discordClasses/channel/embed.cpp
-        include/discordClassses/channel/embed.hpp
+        include/discordClasses/channel/embed.hpp
         src/discordClasses/channel/attachment.cpp
-        include/discordClassses/channel/attachment.hpp
+        include/discordClasses/channel/attachment.hpp
         src/discordClasses/guild/role.cpp
-        include/discordClassses/guild/role.hpp
+        include/discordClasses/guild/role.hpp
         src/discordClasses/guild/guildMember.cpp
-        include/discordClassses/guild/guildMember.hpp
+        include/discordClasses/guild/guildMember.hpp
         src/discordClasses/sticker.cpp
-        include/discordClassses/sticker.hpp
+        include/discordClasses/sticker.hpp
         src/discordClasses/emoji.cpp
-        include/discordClassses/emoji.hpp
+        include/discordClasses/emoji.hpp
         src/discordClasses/interactions/interaction.cpp
-        include/discordClassses/interactions/interaction.hpp
+        include/discordClasses/interactions/interaction.hpp
         src/discordClasses/interactions/messageComponent.cpp
-        include/discordClassses/interactions/messageComponent.hpp
-        )
+        include/discordClasses/interactions/messageComponent.hpp
+        src/discordClasses/guild/guild.cpp
+        include/discordClasses/guild/guild.hpp
+        src/discordClasses/voice.cpp include/discordClasses/voice.hpp
+        include/discordClasses/invite.hpp src/discordClasses/invite.cpp
+        src/discordClasses/guildScheduledEvent.cpp
+        include/discordClasses/guildScheduledEvent.hpp
+        src/discordClasses/eventFields/presence.cpp
+        include/discordClasses/eventFields/presence.hpp
+        src/discordClasses/eventFields/activity.cpp include/discordClasses/eventFields/activity.hpp
+        src/discordClasses/stageInstance.cpp
+        include/discordClasses/stageInstance.hpp
+        src/discordClasses/autoModeration.cpp
+        include/discordClasses/autoModeration.hpp
+        src/discordClasses/guildTemplate.cpp
+        include/discordClasses/guildTemplate.hpp
+        src/discordClasses/webhook.cpp
+        include/discordClasses/webhook.hpp
+        src/discordClasses/interactions/applicationCommands.cpp
+        include/discordClasses/interactions/applicationCommands.hpp)
 
 target_link_libraries(${PROJECT_NAME} OpenSSL::SSL)
 target_link_libraries(${PROJECT_NAME} nlohmann_json)

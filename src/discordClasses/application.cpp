@@ -1,4 +1,4 @@
-#include "discordClassses/application.hpp"
+#include "discordClasses/application.hpp"
 
 helios::installParams helios::installParams::getInstallParamsData(const nlohmann::json &jsonData) {
     installParams installParamsData;
