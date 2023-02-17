@@ -160,7 +160,7 @@ void session::on_read(beast::error_code ec, std::size_t bytes_transferred) {
 }
 
 void session::onClose(beast::error_code ec) {
-    if(ec) throw(helios::heliosException(1, "write: " + ec.what()));
+    if(ec != boost::asio::error::eof) std::cerr << "close: " << ec.what();
     this->callback_c_(ec, 0, this->currentShard);
 };
 
@@ -168,8 +168,6 @@ void session::asyncCloseSession(const websocket::close_code& closeCode)
 {
     if(is_socket_open()) ws_.async_close(closeCode, beast::bind_front_handler(&session::onClose, shared_from_this()));
     buffer_.consume(buffer_.size());
-
-    reinterpret_cast<boost::asio::io_context &>(ws_.get_executor().context()).stop();
 }
 
 

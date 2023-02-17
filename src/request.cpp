@@ -1,4 +1,5 @@
 #include "request.hpp"
+#include <utility>
 
 // Report a failure
 void request::fail(beast::error_code ec, char const* what) {
@@ -6,10 +7,10 @@ void request::fail(beast::error_code ec, char const* what) {
 }
 
 // Performs an HTTP GET and prints the response
-request::request(net::io_context &ioc, ssl::context &ctx, const httpRequest& reqInfo)
+request::request(net::io_context &ioc, ssl::context &ctx, std::shared_ptr<net::strand<boost::asio::io_context::executor_type>> strand, const httpRequest& reqInfo)
 : resolver_(ioc)
 , reqInfo_(reqInfo)
-, stream_(ioc, ctx) {}
+, stream_(ioc, ctx) { this->strand_ = std::move(strand);}
 
 
 void request::run() {
@@ -32,11 +33,14 @@ void request::run() {
         this->req_.body() = this->reqInfo_.payload.dump();
         this->req_.prepare_payload();
     }
+    boost::asio::post(*strand_, [self = shared_from_this()](){
+        self->resolver_.async_resolve(self->reqInfo_.host, self->reqInfo_.port,
+              boost::asio::bind_executor(*self->strand_,
+                 [self](const boost::system::error_code& error, const tcp::resolver::results_type& results){
+                     self->on_resolve(error, results);
+                 }));
+    });
 
-    resolver_.async_resolve(this->reqInfo_.host, this->reqInfo_.port,
-            beast::bind_front_handler(
-                    &request::on_resolve,
-                    shared_from_this()));
 }
 
 void request::on_resolve(beast::error_code ec, const tcp::resolver::results_type& results) {
@@ -44,21 +48,22 @@ void request::on_resolve(beast::error_code ec, const tcp::resolver::results_type
         return fail(ec, "resolve");
 
     beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
-    beast::get_lowest_layer(stream_).async_connect( results,
-            beast::bind_front_handler(
-                    &request::on_connect,
-                    shared_from_this()));
+    boost::asio::post(*this->strand_, [self = shared_from_this(), results, this]() {
+        boost::beast::get_lowest_layer(self->stream_).async_connect(results, boost::asio::bind_executor(*this->strand_, [self](const boost::system::error_code& error, const tcp::resolver::results_type::endpoint_type& endpoint) {
+            self->on_connect(error, endpoint);
+        }));
+    });
 }
 
 void request::on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type&) {
     if(ec)
         return fail(ec, "connect");
 
-    stream_.async_handshake(
-            ssl::stream_base::client,
-            beast::bind_front_handler(
-                    &request::on_handshake,
-                    shared_from_this()));
+    boost::asio::post(*this->strand_, [self = shared_from_this(), this]() {
+        self->stream_.async_handshake(ssl::stream_base::client, boost::asio::bind_executor(*this->strand_, [self](const boost::system::error_code& error) {
+            self->on_handshake(error);
+        }));
+    });
 }
 
 void request::on_handshake(beast::error_code ec) {
@@ -66,10 +71,11 @@ void request::on_handshake(beast::error_code ec) {
         return fail(ec, "handshake");
 
     beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
-    http::async_write(stream_, req_,
-                      beast::bind_front_handler(
-                              &request::on_write,
-                              shared_from_this()));
+    boost::asio::post(*this->strand_, [self = shared_from_this(), this]() {
+        http::async_write(self->stream_, self->req_, boost::asio::bind_executor(*this->strand_, [self](const boost::system::error_code& error, std::size_t bytes_transferred) {
+            self->on_write(error, bytes_transferred);
+        }));
+    });
 }
 
 void request::on_write(beast::error_code ec, std::size_t bytes_transferred) {
@@ -78,17 +84,16 @@ void request::on_write(beast::error_code ec, std::size_t bytes_transferred) {
     if(ec)
         return fail(ec, "write");
 
-    http::async_read(stream_, buffer_, res_,
-                     beast::bind_front_handler(
-                             &request::on_read,
-                             shared_from_this()));
+    boost::asio::post(*this->strand_, [self = shared_from_this(), this]() {
+        http::async_read(self->stream_, self->buffer_, self->res_, boost::asio::bind_executor(*this->strand_, [self](const boost::system::error_code& error, std::size_t bytes_transferred) {
+            self->on_read(error, bytes_transferred);
+        }));
+    });
 }
 
 void request::on_read(beast::error_code ec, std::size_t bytes_transferred) {
     boost::ignore_unused(bytes_transferred);
-
-    if(ec)
-        return fail(ec, "read");
+    if(ec) return fail(ec, "read");
 
     unsigned int httpsResponseCode = res_.result_int();
     switch (httpsResponseCode) {
@@ -105,10 +110,11 @@ void request::on_read(beast::error_code ec, std::size_t bytes_transferred) {
         }
     }
     beast::get_lowest_layer(stream_).expires_after(std::chrono::seconds(30));
-    stream_.async_shutdown(
-            beast::bind_front_handler(
-                    &request::on_shutdown,
-                    shared_from_this()));
+    boost::asio::post(*this->strand_, [self = shared_from_this()]() {
+        self->stream_.async_shutdown(boost::asio::bind_executor(*self->strand_, [self](const boost::system::error_code& error) {
+            self->on_shutdown(error);
+        }));
+    });
 }
 
 void request::on_shutdown(beast::error_code ec) {
@@ -118,15 +124,6 @@ void request::on_shutdown(beast::error_code ec) {
 
     if(ec)
         return fail(ec, "shutdown");
-}
-
-void request::sendHttpRequest(const httpRequest& reqInfo) {
-    net::io_context ioc;
-    ssl::context ctx{ssl::context::tlsv12_client};
-    load_root_certificates(ctx);
-    ctx.set_verify_mode(ssl::verify_peer);
-    std::make_shared<request>(ioc, ctx, reqInfo)->run();
-    ioc.run();
 }
 
 std::string request::urlEncode(const std::string &value) {

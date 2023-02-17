@@ -15,11 +15,11 @@
 #include <memory>
 #include <chrono>
 #include <thread>
+#include <boost/asio/strand.hpp>
 
 #include "rateLimit.hpp"
 #include "heliosException.hpp"
 #include "discordClasses/channel/attachment.hpp"
-#include "ssl/root_certification.hpp"
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
@@ -32,13 +32,13 @@ class request : public std::enable_shared_from_this<request> {
 private:
     tcp::resolver resolver_;
     beast::ssl_stream<beast::tcp_stream> stream_;
-    beast::flat_buffer buffer_; // (Must persist between reads)
+    std::shared_ptr<net::strand<boost::asio::io_context::executor_type>> strand_;
+    beast::flat_buffer buffer_;
     http::request<http::string_body> req_;
     http::response<http::string_body> res_;
     const httpRequest& reqInfo_;
-
 public:
-    explicit request(net::io_context& ioc, ssl::context& ctx, const httpRequest& reqInfo);
+    explicit request(net::io_context& ioc, ssl::context& ctx, std::shared_ptr<net::strand<boost::asio::io_context::executor_type>> strand_, const httpRequest& reqInfo);
     void run();
     void on_resolve(beast::error_code ec, const tcp::resolver::results_type& results);
     void on_connect(beast::error_code ec, const tcp::resolver::results_type::endpoint_type&);
@@ -48,7 +48,6 @@ public:
     void on_shutdown(beast::error_code ec);
     void fail(beast::error_code ec, char const* what);
 
-    static void sendHttpRequest(const httpRequest& reqInfo);
     static std::string urlEncode(const std::string &value);
     static std::string generateRandomString(const std::size_t& length);
 };

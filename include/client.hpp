@@ -20,6 +20,7 @@
 #include "event.hpp"
 #include "cache.hpp"
 #include "request.hpp"
+#include "threadPool.hpp"
 #include "discordClasses/discordClasses.hpp"
 #include "heliosException.hpp"
 
@@ -87,6 +88,8 @@ namespace helios {
 
         bool receivedHeartbeat = true;
         std::unique_ptr<boost::asio::steady_timer> heartbeatIntervalTimer;
+        std::unique_ptr<boost::asio::strand<boost::asio::io_context::executor_type>> strand;
+        std::unique_ptr<std::function<void(const boost::system::error_code& ec)>> heartbeatCycle;
         std::optional<int> heartbeatInterval;
 
         std::string sessionId;
@@ -127,19 +130,19 @@ namespace helios {
         std::string botToken;
         std::shared_ptr<rateLimitStruct> rateLimit;
         int maxConcurrency;
+        bool endSession = false;
 
         bool compress = false;
         int large_threshold = 50;
         int intents = 2097151;
 
         std::vector<std::chrono::time_point<std::chrono::system_clock>> shardCreationTime;
-        std::shared_ptr<boost::asio::thread_pool> threadPool;
+        std::shared_ptr<helios::threadPool> threadPool;
         std::condition_variable updateCondition;
         std::mutex mutex;
 
-        void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
+        static void startHeartbeatCycle(const std::shared_ptr<shard>& shard);
         static void stopHeartbeatCycle(const std::shared_ptr<shard>& shard);
-        static void sendHeartbeat(const std::shared_ptr<shard>& shard);
         void parseResponse(const std::shared_ptr<shard>& shard, const std::string& response);
         void wsShard(const std::string& connectedHost, const std::shared_ptr<shard>& shard);
         static bool sendGatewayMessage(const std::shared_ptr<shard>& shard, const std::string& payload);
@@ -178,7 +181,7 @@ namespace helios {
             [[maybe_unused]] channel create(const channel& channelOptions);
             [[maybe_unused]] [[nodiscard]] std::future<channel> get(const long& channelId, const bool& cacheObject = true) const;
             [[maybe_unused]] [[nodiscard]] channel getFromCache(const long& channelId) const;
-            [[maybe_unused]] bool existsInCache(const long& guildId) const;
+            [[maybe_unused]] [[nodiscard]] bool existsInCache(const long& guildId) const;
         };
         class guildOptions {
         private:
@@ -197,6 +200,7 @@ namespace helios {
         guildOptions guilds{};
 
         [[maybe_unused]] void reconnect();
+        [[maybe_unused]] void disconnect();
         [[noreturn]] [[maybe_unused]] void run();
         onEvent onEvent;
 
